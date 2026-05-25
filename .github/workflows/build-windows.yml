@@ -18,19 +18,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache: true
-          cache-dependency-path: windows/go.sum
 
-      - name: Download dependencies
+      - name: Tidy and download dependencies
         run: |
           cd windows
+          go mod tidy
           go mod download
 
       - name: Build
         env:
           CGO_ENABLED: 0
-          GOOS: windows
-          GOARCH: amd64
         run: |
           cd windows
           New-Item -ItemType Directory -Force -Path ..\dist | Out-Null
