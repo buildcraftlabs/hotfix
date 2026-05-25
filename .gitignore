@@ -1,0 +1,7 @@
+.build/
+dist/
+*.dmg
+*.app
+icon/*.icns
+icon/*.iconset
+.DS_Store

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Flame gradient -->
+    <radialGradient id="flameGlow" cx="50%" cy="70%" r="55%">
+      <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#C9461E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flameGrad" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0%" stop-color="#C9461E"/>
+      <stop offset="55%" stop-color="#E8622A"/>
+      <stop offset="100%" stop-color="#FF8C42"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="blur" in2="SourceGraphic" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark rounded rect background -->
+  <rect x="0" y="0" width="512" height="512" rx="108" ry="108" fill="#141416"/>
+
+  <!-- Subtle background glow -->
+  <ellipse cx="256" cy="340" rx="160" ry="100" fill="url(#flameGlow)"/>
+
+  <!-- Main flame shape -->
+  <g filter="url(#softGlow)">
+    <path d="
+      M256,80
+      C256,80 310,130 320,180
+      C330,230 300,240 310,270
+      C320,300 350,290 355,310
+      C370,360 340,410 295,430
+      C270,440 240,443 220,440
+      C175,432 145,405 140,370
+      C130,330 160,305 165,270
+      C170,240 148,210 155,180
+      C162,148 180,120 200,100
+      C215,85 235,78 256,80
+      Z
+      M256,80
+      C256,80 215,125 220,165
+      C224,195 248,205 248,235
+      C248,265 228,278 232,300
+      C236,322 256,330 256,330
+      C256,330 278,318 278,295
+      C278,272 260,262 262,238
+      C264,210 285,195 288,165
+      C292,128 256,80 256,80
+      Z
+    " fill="url(#flameGrad)" opacity="0.15"/>
+
+    <!-- Primary flame body -->
+    <path d="
+      M256,88
+      C256,88 308,136 318,184
+      C326,222 300,238 308,268
+      C316,296 344,288 350,310
+      C364,356 336,406 292,426
+      C270,436 242,440 222,436
+      C180,428 150,402 144,368
+      C136,330 164,306 168,272
+      C172,244 152,214 158,184
+      C164,152 182,124 202,106
+      C218,91 238,82 256,88
+      Z
+    " fill="url(#flameGrad)" filter="url(#innerGlow)"/>
+
+    <!-- Inner flame highlight (lighter, tighter) -->
+    <path d="
+      M256,140
+      C256,140 286,170 290,200
+      C294,228 276,238 280,260
+      C284,278 300,276 302,292
+      C308,318 290,346 270,356
+      C261,360 250,362 242,358
+      C222,350 210,330 212,308
+      C214,288 230,278 232,258
+      C234,238 220,224 224,200
+      C228,174 244,152 256,140
+      Z
+    " fill="#FF8C42" opacity="0.55"/>
+  </g>
+
+  <!-- Terminal prompt ">_" inside flame, white, bold -->
+  <text
+    x="256"
+    y="320"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'JetBrains Mono', 'SF Mono', 'Menlo', monospace"
+    font-size="88"
+    font-weight="700"
+    fill="#FFFFFF"
+    opacity="0.95"
+    letter-spacing="-4"
+  >&gt;_</text>
+
+  <!-- "MCP" label below flame -->
+  <text
+    x="256"
+    y="468"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'JetBrains Mono', 'SF Mono', 'Menlo', monospace"
+    font-size="42"
+    font-weight="700"
+    fill="#FFFFFF"
+    opacity="0.60"
+    letter-spacing="6"
+  >MCP</text>
+</svg>
