@@ -1,0 +1,49 @@
+name: Build Windows
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: windows/go.sum
+
+      - name: Download dependencies
+        run: |
+          cd windows
+          go mod download
+
+      - name: Build
+        env:
+          CGO_ENABLED: 0
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          cd windows
+          New-Item -ItemType Directory -Force -Path ..\dist | Out-Null
+          go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
+
+      - name: Upload artifact (all runs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hotfix-Windows
+          path: dist/Hotfix.exe
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Hotfix.exe

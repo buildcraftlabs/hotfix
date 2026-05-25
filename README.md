@@ -1,6 +1,6 @@
 # Hotfix
 
-**Keep your Mac cool.** Hotfix is a lightweight macOS menu bar app that monitors CPU usage and automatically terminates runaway processes before your fan spins up and your battery drains.
+**Keep your machine cool.** Hotfix monitors CPU usage and automatically terminates runaway processes before your fan spins up and your battery drains — on both macOS and Windows.
 
 Built by [BuildCraft Labs](https://github.com/buildcraftlabs).
 
@@ -8,37 +8,48 @@ Built by [BuildCraft Labs](https://github.com/buildcraftlabs).
 
 ## The Problem
 
-Claude extensions, AI tools, and background daemons increasingly run rogue on macOS — consuming 50–100% CPU for hours, spinning up fans, draining batteries, and generating heat with no visible indication anything is wrong.
+Claude extensions, AI tools, and background daemons run rogue — consuming 50–100% CPU for hours, spinning up fans, draining batteries, and generating heat with no visible indication anything is wrong.
 
 ## How It Works
 
-1. **Monitor** — Hotfix polls all running processes every 5 seconds
-2. **Detect** — Any process sustaining CPU usage above your configured threshold gets flagged
-3. **Kill** — After your configured duration, it terminates the offender with SIGTERM and notifies you
-
-## Features
-
-- **Menu bar native** — Lives in your menu bar, zero Dock presence
-- **Configurable threshold** — Set the CPU % that triggers monitoring (default: 80%)
-- **Configurable duration** — How long a process must be hot before being killed (default: 60s)
-- **Kill on sleep** — Optionally terminate hot processes when your Mac sleeps
-- **Exclusion list** — Protect specific processes from ever being killed (Xcode, node, etc.)
-- **Auto-updates** — Checks GitHub releases for new versions on launch
-- **Safety exclusions** — System-critical processes (WindowServer, launchd, Finder) are permanently protected
+1. **Monitor** — Polls all running processes every 5 seconds
+2. **Detect** — Any process sustaining CPU above your configured threshold gets flagged
+3. **Kill** — After your configured duration, it terminates the offender and notifies you
 
 ## Download
 
-Download the latest DMG from [Releases](https://github.com/buildcraftlabs/hotfix/releases/latest).
+| Platform | Download | Requirements |
+|----------|----------|-------------|
+| **macOS** | [Hotfix.dmg](https://github.com/buildcraftlabs/hotfix/releases/latest) | macOS 13+ · Apple Silicon or Intel |
+| **Windows** | [Hotfix.exe](https://github.com/buildcraftlabs/hotfix/releases/latest) | Windows 11 · x64 |
 
-> **Note:** Hotfix is not yet notarized. On first open, right-click the app → **Open** to bypass Gatekeeper.
+> **macOS:** Not yet notarized — right-click → **Open** on first launch to bypass Gatekeeper.
 
-## Requirements
+## Features
 
-- macOS 13 (Ventura) or later
-- Apple Silicon or Intel
+- **Native system tray** — Lives in your menu bar / taskbar, no Dock or taskbar icon
+- **Configurable threshold** — Set the CPU % that triggers monitoring (default: 80%)
+- **Configurable duration** — How long a process must be hot before being killed (default: 60s)
+- **Kill on sleep** — Optionally terminate hot processes when the machine sleeps
+- **Exclusion list** — Protect specific processes from ever being killed
+- **Auto-updates** — Checks GitHub releases for new versions on launch
+- **Safety exclusions** — System-critical processes are permanently protected and can never be killed
+
+## Configuration
+
+Settings are accessible from the tray icon → **Settings**.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| CPU Threshold | 80% | Processes above this level are monitored |
+| Kill After | 60s | Duration above threshold before termination |
+| Kill on Sleep | On | Kill hot processes when machine sleeps |
+| Exclusions (macOS) | Xcode, swift, clang, node, python3 | Processes never killed |
+| Exclusions (Windows) | explorer, svchost, lsass, dwm… | Processes never killed |
 
 ## Build from Source
 
+### macOS
 Requires Xcode Command Line Tools.
 
 ```bash
@@ -48,27 +59,41 @@ bash scripts/build.sh
 open "dist/Hotfix.dmg"
 ```
 
-The build script produces a universal binary (arm64 + x86_64), assembles the `.app` bundle, ad-hoc signs it, and packages it into a DMG.
+### Windows
+Requires Go 1.22+.
+
+```powershell
+git clone https://github.com/buildcraftlabs/hotfix.git
+cd hotfix\windows
+go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
+```
 
 ## Releasing a New Version
 
-1. Update `currentVersion` in `Sources/Hotfix/UpdateChecker.swift`
-2. Update `CFBundleShortVersionString` in `Resources/Info.plist`
-3. Run `bash scripts/build.sh`
+Releasing is semi-automated. The Windows `.exe` is built by CI automatically on every new release.
+
+1. Bump version in `Sources/Hotfix/UpdateChecker.swift` and `Resources/Info.plist` (macOS)
+2. Bump version in `windows/main.go` (Windows)
+3. Build the macOS DMG: `bash scripts/build.sh`
 4. Create a GitHub release tagged `v<version>` and attach `dist/Hotfix.dmg`
+5. The `Build Windows` GitHub Actions workflow runs automatically and attaches `Hotfix.exe` to the release
 
-Users with Hotfix installed will be notified of the update on next launch.
+Users on both platforms will be notified of the update on next launch.
 
-## Configuration
+## Repository Structure
 
-All settings are accessible from the menu bar popover → **Settings**.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| CPU Threshold | 80% | Processes above this level are monitored |
-| Kill After | 60s | Duration before termination |
-| Kill on Sleep | On | Kill hot processes when Mac sleeps |
-| Exclusions | Xcode, swift, clang, node, python3 | Processes never killed |
+```
+hotfix/
+├── Sources/Hotfix/     # macOS Swift/SwiftUI app
+├── Resources/          # macOS Info.plist
+├── scripts/            # Build scripts (macOS DMG, icon generation)
+├── windows/            # Windows Go app
+│   ├── assets/         # Embedded settings HTML (BuildCraft design)
+│   └── *.go            # Go source files
+├── icon/               # App icon assets
+├── landing-page/       # Marketing website
+└── .github/workflows/  # CI for Windows builds
+```
 
 ## License
 
