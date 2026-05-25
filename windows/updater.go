@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -20,12 +22,18 @@ const (
 )
 
 type githubRelease struct {
-	TagName string `json:"tag_name"`
-	HTMLURL string `json:"html_url"`
+	TagName string          `json:"tag_name"`
+	HTMLURL string          `json:"html_url"`
+	Assets  []githubAsset   `json:"assets"`
 }
 
-// checkForUpdates fetches the latest GitHub release and opens the browser
-// if a newer version is available. It is safe to call from any goroutine.
+type githubAsset struct {
+	Name               string `json:"name"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+// checkForUpdates fetches the latest GitHub release. If a newer version is
+// found it downloads the .exe in the background and self-replaces on exit.
 func checkForUpdates() {
 	logf("updater: checking for updates (current: %s)", currentVersion)
 
@@ -61,19 +69,105 @@ func checkForUpdates() {
 	if strings.HasPrefix(tag, "v") {
 		tag = tag[1:]
 	}
-
 	logf("updater: latest release is %s", tag)
 
-	if isNewer(tag, currentVersion) {
-		logf("updater: update available (%s → %s), opening browser", currentVersion, tag)
-		url := release.HTMLURL
-		if url == "" {
-			url = releasesPageURL
-		}
-		openURL(url)
-	} else {
+	if !isNewer(tag, currentVersion) {
 		logf("updater: already up to date")
+		setTrayStatus("Up to date", false)
+		time.AfterFunc(3*time.Second, func() { setTrayStatus("Watching", false) })
+		return
 	}
+
+	// Find the .exe asset
+	var exeURL string
+	for _, a := range release.Assets {
+		if strings.HasSuffix(strings.ToLower(a.Name), ".exe") {
+			exeURL = a.BrowserDownloadURL
+			break
+		}
+	}
+
+	if exeURL == "" {
+		logf("updater: no .exe asset found, opening browser")
+		openURL(releasesPageURL)
+		return
+	}
+
+	logf("updater: downloading %s from %s", tag, exeURL)
+	setTrayStatus("Downloading update…", false)
+	go downloadAndReplace(exeURL, tag)
+}
+
+func downloadAndReplace(exeURL, version string) {
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(exeURL)
+	if err != nil {
+		logf("updater: download error: %v", err)
+		setTrayStatus("Update failed", false)
+		time.AfterFunc(3*time.Second, func() { setTrayStatus("Watching", false) })
+		return
+	}
+	defer resp.Body.Close()
+
+	tmpDir := os.TempDir()
+	newExePath := filepath.Join(tmpDir, "Hotfix_new.exe")
+
+	f, err := os.Create(newExePath)
+	if err != nil {
+		logf("updater: create temp file error: %v", err)
+		return
+	}
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		f.Close()
+		logf("updater: write temp file error: %v", err)
+		return
+	}
+	f.Close()
+
+	// Get the path of the currently running .exe
+	selfPath, err := os.Executable()
+	if err != nil {
+		logf("updater: could not determine self path: %v", err)
+		return
+	}
+
+	// Write a batch script that waits for this process to exit, replaces it, and relaunches.
+	batPath := filepath.Join(tmpDir, "hotfix_update.bat")
+	bat := fmt.Sprintf(`@echo off
+ping -n 3 127.0.0.1 > nul
+copy /Y "%s" "%s"
+start "" "%s"
+del "%s"
+del "%%~f0"
+`, newExePath, selfPath, selfPath, newExePath)
+
+	if err := os.WriteFile(batPath, []byte(bat), 0644); err != nil {
+		logf("updater: write bat error: %v", err)
+		return
+	}
+
+	logf("updater: update downloaded, launching installer and exiting")
+	setTrayStatus("Installing…", false)
+
+	cmd := exec.Command("cmd", "/c", "start", "/b", "", batPath)
+	if err := cmd.Start(); err != nil {
+		logf("updater: launch bat error: %v", err)
+		return
+	}
+
+	// Quit so the batch script can replace our exe
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		systrayQuit()
+	}()
+}
+
+// systrayQuit is called on the main goroutine via a deferred call to avoid
+// calling systray.Quit from within the event loop handler.
+var systrayQuitCh = make(chan struct{}, 1)
+
+func systrayQuit() {
+	systrayQuitCh <- struct{}{}
 }
 
 // isNewer returns true when remote semver is greater than installed semver.

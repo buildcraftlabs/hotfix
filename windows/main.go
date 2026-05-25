@@ -82,6 +82,10 @@ func onReady() {
 			case <-mQuit.ClickedCh:
 				systray.Quit()
 				return
+
+			case <-systrayQuitCh:
+				systray.Quit()
+				return
 			}
 		}
 	}()
