@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hotfix — Keep Your Machine Cool</title>
+  <meta name="description" content="Hotfix automatically terminates runaway processes before your fan spins up. Free, native app for macOS and Windows by BuildCraft Labs."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F6F4F0; --dark: #141416; --accent: #C9461E;
+      --card: #EDEAE5; --border: rgba(20,20,22,0.10); --muted: rgba(20,20,22,0.45);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--dark); font-family: 'Manrope', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(246,244,240,0.88); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 60px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+    .nav-logo .flame { font-size: 20px; }
+    .nav-badge { font-size: 10px; font-weight: 600; color: var(--accent); background: rgba(201,70,30,0.10); border: 1px solid rgba(201,70,30,0.20); padding: 2px 7px; border-radius: 20px; letter-spacing: 0.3px; }
+    .nav-cta { background: var(--dark); color: #fff; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 8px; transition: opacity .15s; }
+    .nav-cta:hover { opacity: 0.82; }
+    @media(max-width:600px){ nav { padding: 0 20px; } .nav-badge { display: none; } }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center; padding: 96px 24px 80px;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(201,70,30,0.07) 0%, transparent 70%);
+    }
+    .hero-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; }
+    .hero h1 {
+      font-family: 'Fraunces', Georgia, serif; font-weight: 300;
+      font-size: clamp(40px, 6vw, 72px); line-height: 1.1;
+      color: var(--dark); max-width: 800px; margin: 0 auto 24px;
+    }
+    .hero h1 em { font-style: italic; color: var(--accent); }
+    .hero-sub { font-size: 17px; color: var(--muted); max-width: 480px; margin: 0 auto 40px; line-height: 1.65; }
+    .download-group { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+      padding: 13px 24px; border-radius: 10px; transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--card); color: var(--dark); font-size: 14px; font-weight: 600;
+      padding: 13px 24px; border-radius: 10px; border: 1px solid var(--border); transition: background .15s;
+    }
+    .btn-secondary:hover { background: #E5E2DC; }
+    .hero-meta { margin-top: 20px; font-size: 12px; color: var(--muted); }
+
+    /* ── Section base ── */
+    section { padding: 80px 24px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+    .section-title { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: clamp(28px, 3.5vw, 42px); line-height: 1.2; margin-bottom: 16px; }
+    .section-sub { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.6; }
+
+    /* ── Problem ── */
+    .problem { background: var(--card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2px; margin-top: 48px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+    .problem-card { background: var(--bg); padding: 28px; }
+    .problem-card .icon { font-size: 28px; margin-bottom: 14px; }
+    .problem-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .problem-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── How it works ── */
+    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 52px; }
+    .step { position: relative; }
+    .step-num {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+    @media(max-width:680px){ .steps { grid-template-columns: 1fr; gap: 24px; } }
+
+    /* ── Download ── */
+    .download-section { background: var(--dark); color: #fff; text-align: center; }
+    .download-section .section-label { color: rgba(201,70,30,0.8); }
+    .download-section .section-title { color: #fff; }
+    .download-section .section-sub { color: rgba(255,255,255,0.5); margin: 0 auto 48px; }
+    .platform-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; margin: 0 auto; }
+    .platform-card {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px; padding: 28px; text-align: left;
+    }
+    .platform-card .plat-icon { font-size: 28px; margin-bottom: 12px; }
+    .platform-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: #fff; }
+    .platform-card .plat-req { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+    .btn-dl {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+      padding: 10px 18px; border-radius: 8px; width: 100%; justify-content: center;
+      transition: opacity .15s;
+    }
+    .btn-dl:hover { opacity: 0.88; }
+    .download-note { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.30); max-width: 480px; margin-left: auto; margin-right: auto; }
+    @media(max-width:520px){ .platform-cards { grid-template-columns: 1fr; } }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--dark); border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 32px 48px; display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 10px; }
+    .footer-bc-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 15px; color: #fff;
+    }
+    .footer-bc-logo .bc-mark {
+      width: 28px; height: 28px; background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff; font-family: 'Manrope', sans-serif;
+    }
+    .footer-bc-url { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .footer-right { font-size: 12px; color: rgba(255,255,255,0.30); text-align: right; }
+    .footer-right a { color: rgba(255,255,255,0.45); transition: color .15s; }
+    .footer-right a:hover { color: #fff; }
+    @media(max-width:600px){ footer { padding: 28px 20px; } .footer-right { text-align: left; } }
+
+    /* ── Fade in ── */
+    .fade { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
+    .fade.visible { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">
+    <span class="flame">🔥</span>
+    <span>Hotfix</span>
+    <span class="nav-badge">FREE</span>
+  </div>
+  <a class="nav-cta" href="https://github.com/buildcraftlabs/hotfix/releases/latest">Download</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <p class="hero-eyebrow">By BuildCraft Labs</p>
+  <h1>Your machine is on fire.<br/><em>We kill what started it.</em></h1>
+  <p class="hero-sub">Hotfix monitors CPU usage in the background and automatically terminates runaway processes before your fan screams and your battery dies.</p>
+  <div class="download-group">
+    <a class="btn-primary" href="https://github.com/buildcraftlabs/hotfix/releases/latest/download/Hotfix.dmg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      Download for macOS
+    </a>
+    <a class="btn-secondary" href="https://github.com/buildcraftlabs/hotfix/releases/latest/download/Hotfix.exe">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.557L10.333 4.5v7.167H3V5.557zm0 12.886L10.333 19.5v-7.167H3v5.11zm8-13.109L21 3.667v8.167H11V5.334zm0 13.11L21 20.333v-8.167H11v6.277z"/></svg>
+      Download for Windows
+    </a>
+  </div>
+  <p class="hero-meta">macOS 13+ · Windows 11 · Free · Open Source</p>
+</section>
+
+<!-- Problem -->
+<section class="problem">
+  <div class="container fade">
+    <p class="section-label">The Problem</p>
+    <h2 class="section-title">Background processes run rogue.</h2>
+    <p class="section-sub">AI tools, extensions, and daemons increasingly consume 50–100% CPU for hours — silently.</p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="icon">🔌</div>
+        <h3>AI extensions go haywire</h3>
+        <p>Claude, Copilot, and other AI extensions can spawn Python or Node processes that loop forever, burning CPU with no indication anything is wrong.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🌀</div>
+        <h3>Fan runs for hours</h3>
+        <p>Your fan spins up and won't stop. The system stays hot. Thermal throttling kicks in. Everything slows down — all because of one rogue process.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🔋</div>
+        <h3>Battery drains fast</h3>
+        <p>Sustained high CPU usage can cut battery life in half. Processes that should idle are instead burning through your charge in the background.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section>
+  <div class="container fade">
+    <p class="section-label">How It Works</p>
+    <h2 class="section-title">Simple. Automatic. Quiet.</h2>
+    <p class="section-sub">Hotfix runs silently in your system tray and handles everything without interrupting your work.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Monitor</h3>
+        <p>Hotfix polls all running processes every 5 seconds, tracking CPU usage per process over time.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Detect</h3>
+        <p>When a process sustains CPU usage above your threshold for longer than your configured duration, it gets flagged.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Kill</h3>
+        <p>The offending process is terminated. You get a notification. Your fan slows down. Done.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Download -->
+<section class="download-section">
+  <div class="container fade">
+    <p class="section-label">Download</p>
+    <h2 class="section-title">Free for macOS and Windows.</h2>
+    <p class="section-sub">Native app for both platforms. No subscription, no account, no telemetry.</p>
+    <div class="platform-cards">
+      <div class="platform-card">
+        <div class="plat-icon">🍎</div>
+        <h3>macOS</h3>
+        <p class="plat-req">Requires macOS 13 Ventura or later · Apple Silicon &amp; Intel</p>
+        <a class="btn-dl" href="https://github.com/buildcraftlabs/hotfix/releases/latest/download/Hotfix.dmg">
+          Download .dmg
+        </a>
+      </div>
+      <div class="platform-card">
+        <div class="plat-icon">🪟</div>
+        <h3>Windows</h3>
+        <p class="plat-req">Requires Windows 11 · 64-bit</p>
+        <a class="btn-dl" href="https://github.com/buildcraftlabs/hotfix/releases/latest/download/Hotfix.exe">
+          Download .exe
+        </a>
+      </div>
+    </div>
+    <p class="download-note">macOS: right-click → Open on first launch (not yet notarized). Windows: run directly, no installer needed.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-brand">
+    <a class="footer-bc-logo" href="https://buildcraft.town" target="_blank" rel="noopener">
+      <div class="bc-mark">BC</div>
+      <div>
+        <div>BuildCraft Labs</div>
+        <div class="footer-bc-url">buildcraft.town</div>
+      </div>
+    </a>
+  </div>
+  <div class="footer-right">
+    <div>© 2025 BuildCraft Labs</div>
+    <div style="margin-top:4px;">
+      <a href="https://github.com/buildcraftlabs/hotfix">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/buildcraftlabs/hotfix/releases">Releases</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/buildcraftlabs/hotfix/issues/new">Report a Bug</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.fade').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
