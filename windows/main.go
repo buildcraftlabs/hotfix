@@ -3,6 +3,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -163,90 +165,60 @@ func iconBytes() []byte {
 // minimalICO builds a minimal valid 16x16 ICO file in memory.
 // The image is a solid #C9461E (BuildCraft orange) square.
 func minimalICO() []byte {
-	// ICO header (6 bytes)
-	// ICONDIRENTRY (16 bytes)
-	// BITMAPINFOHEADER (40 bytes)
-	// Colour table (8 bytes — 2 colours: transparent + orange)
-	// XOR mask  (16*16/8 = 32 bytes — all ones → orange)
-	// AND mask  (16*16/8 = 32 bytes — all zeros → fully opaque)
-
 	const (
 		width    = 16
 		height   = 16
-		rowBytes = (width + 7) / 8 // 2 bytes per row for 1-bit
+		rowBytes = (width + 7) / 8
 	)
 
-	// Pixel rows: all 1s (maps to colour[1] = orange).
+	// XOR mask: all 1s → maps to colour[1] (orange)
 	var xorMask [height * rowBytes]byte
 	for i := range xorMask {
 		xorMask[i] = 0xFF
 	}
-
-	// AND mask: all 0s = fully opaque.
+	// AND mask: all 0s → fully opaque
 	var andMask [height * rowBytes]byte
 
-	bmpSize := 40 + 8 + len(xorMask) + len(andMask) // BITMAPINFOHEADER + palette + masks
-	icoSize := 6 + 16 + bmpSize
+	bmpSize := uint32(40 + 8 + len(xorMask) + len(andMask))
 
-	buf := make([]byte, 0, icoSize)
+	var b bytes.Buffer
+	le := binary.LittleEndian
 
-	// ICO header
-	buf = append(buf,
-		0x00, 0x00, // reserved
-		0x01, 0x00, // type = ICO
-		0x01, 0x00, // image count = 1
-	)
+	// ICO header (6 bytes)
+	binary.Write(&b, le, uint16(0))    // reserved
+	binary.Write(&b, le, uint16(1))    // type = ICO
+	binary.Write(&b, le, uint16(1))    // image count
 
-	// ICONDIRENTRY
-	buf = append(buf,
-		byte(width),        // width
-		byte(height),       // height
-		0x02,               // colour count (2 colours in palette)
-		0x00,               // reserved
-		0x01, 0x00,         // planes
-		0x01, 0x00,         // bit count
-		u32LE(bmpSize)...,  // size of image data
-		u32LE(6+16)...,     // offset to image data
-	)
+	// ICONDIRENTRY (16 bytes)
+	b.Write([]byte{byte(width), byte(height), 2, 0}) // w, h, colourCount, reserved
+	binary.Write(&b, le, uint16(1))                  // planes
+	binary.Write(&b, le, uint16(1))                  // bit count
+	binary.Write(&b, le, bmpSize)                    // size of image data
+	binary.Write(&b, le, uint32(6+16))               // offset to image data
 
 	// BITMAPINFOHEADER (40 bytes)
-	buf = append(buf,
-		u32LE(40)...,             // header size
-		u32LE(width)...,          // width
-		u32LE(height*2)...,       // height (×2 because ICO includes AND mask)
-		0x01, 0x00,               // planes
-		0x01, 0x00,               // bit count
-		u32LE(0)...,              // compression (none)
-		u32LE(0)...,              // image size (0 = auto)
-		u32LE(0)...,              // X pixels per metre
-		u32LE(0)...,              // Y pixels per metre
-		u32LE(2)...,              // colours used
-		u32LE(2)...,              // colours important
-	)
+	binary.Write(&b, le, uint32(40))          // header size
+	binary.Write(&b, le, uint32(width))       // width
+	binary.Write(&b, le, uint32(height*2))    // height ×2 (XOR + AND masks)
+	binary.Write(&b, le, uint16(1))           // planes
+	binary.Write(&b, le, uint16(1))           // bit count
+	binary.Write(&b, le, uint32(0))           // compression
+	binary.Write(&b, le, uint32(0))           // image size
+	binary.Write(&b, le, uint32(0))           // X px/metre
+	binary.Write(&b, le, uint32(0))           // Y px/metre
+	binary.Write(&b, le, uint32(2))           // colours used
+	binary.Write(&b, le, uint32(2))           // colours important
 
-	// Colour table: [0] transparent black, [1] BuildCraft orange #C9461E (BGRA)
-	buf = append(buf,
-		0x00, 0x00, 0x00, 0x00, // colour 0: black, fully transparent
-		0x1E, 0x46, 0xC9, 0x00, // colour 1: #C9461E in BGR + reserved byte
-	)
+	// Colour table: [0] black transparent, [1] #C9461E in BGR
+	b.Write([]byte{0x00, 0x00, 0x00, 0x00})
+	b.Write([]byte{0x1E, 0x46, 0xC9, 0x00})
 
-	// XOR mask (bottom-up — row 0 is the bottom row).
-	buf = append(buf, xorMask[:]...)
-	// AND mask
-	buf = append(buf, andMask[:]...)
+	b.Write(xorMask[:])
+	b.Write(andMask[:])
 
-	return buf
+	return b.Bytes()
 }
 
-// u32LE encodes v as 4 little-endian bytes.
-func u32LE(v int) []byte {
-	return []byte{
-		byte(v),
-		byte(v >> 8),
-		byte(v >> 16),
-		byte(v >> 24),
-	}
-}
 
 // --- Logging ---
 var (
