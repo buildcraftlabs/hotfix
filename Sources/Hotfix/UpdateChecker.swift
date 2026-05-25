@@ -3,7 +3,7 @@ import AppKit
 
 class UpdateChecker {
     static let shared = UpdateChecker()
-    static let currentVersion = "1.0.1"
+    static let currentVersion = "1.0.2"
 
     private let releasesURL = URL(string: "https://api.github.com/repos/buildcraftlabs/hotfix/releases/latest")!
     private let downloadURL = URL(string: "https://github.com/buildcraftlabs/hotfix/releases/latest")!

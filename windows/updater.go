@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	currentVersion  = "1.0.0"
+	currentVersion  = "1.0.2"
 	releasesAPIURL  = "https://api.github.com/repos/buildcraftlabs/hotfix/releases/latest"
 	releasesPageURL = "https://github.com/buildcraftlabs/hotfix/releases/latest"
 )
