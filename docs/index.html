@@ -33,6 +33,19 @@
     .nav-cta:hover { opacity: 0.82; }
     @media(max-width:600px){ nav { padding: 0 20px; } .nav-badge { display: none; } }
 
+    /* ── Mobile base ── */
+    @media(max-width:768px){
+      section { padding: 56px 20px; }
+      .hero { padding: 64px 20px 56px; }
+    }
+    @media(max-width:480px){
+      section { padding: 44px 16px; }
+      .hero { padding: 48px 16px 44px; }
+      .hero-sub { font-size: 15px; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+      .download-group { flex-direction: column; align-items: stretch; }
+    }
+
     /* ── Hero ── */
     .hero {
       text-align: center; padding: 96px 24px 80px;
@@ -122,11 +135,7 @@
       display: flex; align-items: center; gap: 8px;
       font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 15px; color: #fff;
     }
-    .footer-bc-logo .bc-mark {
-      width: 28px; height: 28px; background: var(--accent); border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; color: #fff; font-family: 'Manrope', sans-serif;
-    }
+    .footer-bc-logo .bc-mark { width: 28px; height: 28px; flex-shrink: 0; }
     .footer-bc-url { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
     .footer-right { font-size: 12px; color: rgba(255,255,255,0.30); text-align: right; }
     .footer-right a { color: rgba(255,255,255,0.45); transition: color .15s; }
@@ -252,7 +261,25 @@
 <footer>
   <div class="footer-brand">
     <a class="footer-bc-logo" href="https://buildcraft.town" target="_blank" rel="noopener">
-      <div class="bc-mark">BC</div>
+      <svg class="bc-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1600" shape-rendering="crispEdges">
+        <g fill="#EDEAE5">
+          <rect x="328"  y="176"  width="144" height="548"/>
+          <rect x="328"  y="876"  width="144" height="548"/>
+          <rect x="728"  y="176"  width="144" height="148"/>
+          <rect x="728"  y="476"  width="144" height="648"/>
+          <rect x="728"  y="1276" width="144" height="148"/>
+          <rect x="1128" y="176"  width="144" height="548"/>
+          <rect x="1128" y="876"  width="144" height="548"/>
+          <rect x="176"  y="328"  width="148" height="144"/>
+          <rect x="476"  y="328"  width="648" height="144"/>
+          <rect x="1276" y="328"  width="148" height="144"/>
+          <rect x="176"  y="728"  width="548" height="144"/>
+          <rect x="876"  y="728"  width="548" height="144"/>
+          <rect x="176"  y="1128" width="148" height="144"/>
+          <rect x="476"  y="1128" width="648" height="144"/>
+          <rect x="1276" y="1128" width="148" height="144"/>
+        </g>
+      </svg>
       <div>
         <div>BuildCraft Labs</div>
         <div class="footer-bc-url">buildcraft.town</div>
