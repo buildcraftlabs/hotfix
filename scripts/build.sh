@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────
-# MCP Killer — Build Script
+# Hotfix — Build Script
 # BuildCraft Labs · 2025
 # ─────────────────────────────────────────────────────────────
 
@@ -13,7 +13,7 @@ BUILD_DIR="$PROJECT_ROOT/.build/apple/Products/Release"
 APP_NAME="Hotfix"
 DISPLAY_NAME="Hotfix"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
-DMG_NAME="MCP Killer"
+DMG_NAME="Hotfix"
 DMG_OUT="$DIST_DIR/$DMG_NAME.dmg"
 ICON_DIR="$PROJECT_ROOT/icon"
 SVG_SOURCE="$ICON_DIR/AppIcon.svg"
@@ -28,7 +28,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-log()    { echo -e "${CYAN}[MCP Killer]${NC} $*"; }
+log()    { echo -e "${CYAN}[Hotfix]${NC} $*"; }
 ok()     { echo -e "${GREEN}[✓]${NC} $*"; }
 warn()   { echo -e "${YELLOW}[!]${NC} $*"; }
 die()    { echo -e "${RED}[✗] $*${NC}" >&2; exit 1; }
@@ -242,7 +242,7 @@ ok "DMG created: $DMG_OUT"
 # ─────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  MCP Killer built successfully!${NC}"
+echo -e "${BOLD}  Hotfix built successfully!${NC}"
 echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  App:  ${CYAN}$APP_BUNDLE${NC}"
