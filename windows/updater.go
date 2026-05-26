@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -131,31 +130,28 @@ func downloadAndReplace(exeURL, version string) {
 		return
 	}
 
-	// Write a batch script that waits for this process to exit, replaces it, and relaunches.
-	batPath := filepath.Join(tmpDir, "hotfix_update.bat")
-	bat := fmt.Sprintf(`@echo off
-ping -n 3 127.0.0.1 > nul
-copy /Y "%s" "%s"
-start "" "%s"
-del "%s"
-del "%%~f0"
-`, newExePath, selfPath, selfPath, newExePath)
-
-	if err := os.WriteFile(batPath, []byte(bat), 0644); err != nil {
-		logf("updater: write bat error: %v", err)
-		return
-	}
+	// PowerShell one-liner: wait for us to exit, swap exe, relaunch, clean up.
+	// Single-quoting paths is safe on Windows (paths never contain single quotes).
+	// Running via hiddenCmd + -WindowStyle Hidden means zero visible windows.
+	psScript := fmt.Sprintf(
+		`Start-Sleep -Seconds 2; `+
+			`Copy-Item -Force -LiteralPath '%s' -Destination '%s'; `+
+			`Start-Process -FilePath '%s'; `+
+			`Remove-Item -Force -LiteralPath '%s'`,
+		newExePath, selfPath, selfPath, newExePath,
+	)
 
 	logf("updater: update downloaded, launching installer and exiting")
 	setTrayStatus("Installing…", false)
 
-	cmd := exec.Command("cmd", "/c", "start", "/b", "", batPath)
+	cmd := hiddenCmd("powershell", "-NonInteractive", "-NoProfile",
+		"-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-Command", psScript)
 	if err := cmd.Start(); err != nil {
-		logf("updater: launch bat error: %v", err)
+		logf("updater: launch installer error: %v", err)
 		return
 	}
 
-	// Quit so the batch script can replace our exe
+	// Quit so PowerShell can replace our exe
 	go func() {
 		time.Sleep(500 * time.Millisecond)
 		systrayQuit()
@@ -198,9 +194,9 @@ func parseSemver(v string) [3]int {
 	return result
 }
 
-// openURL opens a URL in the default Windows browser.
+// openURL opens a URL in the default Windows browser without a console flash.
 func openURL(url string) {
-	cmd := exec.Command("cmd", "/c", "start", url)
+	cmd := hiddenCmd("cmd", "/c", "start", url)
 	if err := cmd.Start(); err != nil {
 		logf("updater: open URL error: %v", err)
 	}

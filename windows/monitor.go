@@ -11,8 +11,18 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
+
+// hiddenCmd returns a Cmd that runs without creating a visible console window.
+// Required because Hotfix is built with -H windowsgui: any console-subsystem
+// child (wmic, taskkill, powershell, cmd) would otherwise flash a black window.
+func hiddenCmd(name string, args ...string) *exec.Cmd {
+	cmd := exec.Command(name, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd
+}
 
 // safetyExclusions are processes that must NEVER be killed, regardless of config.
 var safetyExclusions = map[string]bool{
@@ -67,10 +77,7 @@ func stopMonitor() {
 	monitorMu.Unlock()
 
 	if ch != nil {
-		select {
-		case ch <- struct{}{}:
-		default:
-		}
+		close(ch) // closing broadcasts to the goroutine even if it's mid-checkProcesses
 	}
 
 	hotMu.Lock()
@@ -181,7 +188,7 @@ type processEntry struct {
 func queryProcesses() ([]processEntry, error) {
 	// WMIC returns CSV with a blank first line, then a header, then data.
 	// Columns: Node,IDProcess,Name,PercentProcessorTime
-	cmd := exec.Command("wmic",
+	cmd := hiddenCmd("wmic",
 		"path", "Win32_PerfFormattedData_PerfProc_Process",
 		"get", "IDProcess,Name,PercentProcessorTime",
 		"/format:csv",
@@ -294,7 +301,7 @@ func killProcess(hp *HotProcess) {
 	logf("monitor: killing %s (PID %d) — %.1f%% CPU for %.0fs",
 		hp.Name, hp.PID, hp.CPU, time.Since(hp.HotSince).Seconds())
 
-	cmd := exec.Command("taskkill", "/PID", strconv.Itoa(hp.PID), "/F")
+	cmd := hiddenCmd("taskkill", "/PID", strconv.Itoa(hp.PID), "/F")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 
@@ -332,7 +339,7 @@ func watchSleep() {
 			`Write-Output "sleep"` +
 			`}`
 
-		cmd := exec.Command("powershell", "-NonInteractive", "-NoProfile",
+		cmd := hiddenCmd("powershell", "-NonInteractive", "-NoProfile",
 			"-WindowStyle", "Hidden", "-Command", ps)
 
 		stdout, err := cmd.StdoutPipe()

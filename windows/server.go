@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os/exec"
 	"sync"
 )
 
@@ -60,7 +59,7 @@ func openSettings() {
 	port := startServer()
 	url := fmt.Sprintf("http://127.0.0.1:%d/", port)
 	logf("server: opening %s", url)
-	cmd := exec.Command("cmd", "/c", "start", url)
+	cmd := hiddenCmd("cmd", "/c", "start", url)
 	if err := cmd.Start(); err != nil {
 		logf("server: open browser error: %v", err)
 	}
