@@ -67,7 +67,7 @@ func showSettingsWindow() {
 	sldCPU.SetBounds(px, y, inner-2*px, 28)
 	sldCPU.SetMin(1)
 	sldCPU.SetMax(100)
-	sldCPU.SetValue(int(cfg.CPUThreshold))
+	sldCPU.SetPosition(int(cfg.CPUThreshold))
 	sldCPU.SetOnChange(func(v int) {
 		lblCPUVal.SetText(strconv.Itoa(v) + " %")
 	})
@@ -89,7 +89,7 @@ func showSettingsWindow() {
 	sldKill.SetBounds(px, y, inner-2*px, 28)
 	sldKill.SetMin(5)
 	sldKill.SetMax(300)
-	sldKill.SetValue(int(cfg.KillDuration))
+	sldKill.SetPosition(int(cfg.KillDuration))
 	sldKill.SetOnChange(func(v int) {
 		lblKillVal.SetText(strconv.Itoa(v) + " s")
 	})
@@ -126,8 +126,8 @@ func showSettingsWindow() {
 
 		newCfg := getConfig()
 		newCfg.Enabled = chkEnabled.Checked()
-		newCfg.CPUThreshold = float64(sldCPU.Value())
-		newCfg.KillDuration = float64(sldKill.Value())
+		newCfg.CPUThreshold = float64(sldCPU.Position())
+		newCfg.KillDuration = float64(sldKill.Position())
 		newCfg.KillOnSleep = chkSleep.Checked()
 
 		parts := strings.Split(editEx.Text(), ",")
