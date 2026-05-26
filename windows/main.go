@@ -74,7 +74,7 @@ func onReady() {
 				toggleEnabled()
 
 			case <-mSettings.ClickedCh:
-				go openSettings()
+				go showSettingsWindow()
 
 			case <-mUpdate.ClickedCh:
 				go checkForUpdates()

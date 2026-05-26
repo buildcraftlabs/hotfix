@@ -5,7 +5,6 @@ package main
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -54,16 +53,6 @@ func startServer() int {
 	return serverPort
 }
 
-// openSettings opens the settings page in the default browser.
-func openSettings() {
-	port := startServer()
-	url := fmt.Sprintf("http://127.0.0.1:%d/", port)
-	logf("server: opening %s", url)
-	cmd := hiddenCmd("cmd", "/c", "start", url)
-	if err := cmd.Start(); err != nil {
-		logf("server: open browser error: %v", err)
-	}
-}
 
 // handleSettings serves the embedded settings HTML page.
 func handleSettings(w http.ResponseWriter, r *http.Request) {
