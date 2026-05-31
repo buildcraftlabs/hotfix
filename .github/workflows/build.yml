@@ -25,6 +25,11 @@ jobs:
           go mod tidy
           go mod download
 
+      - name: Test
+        run: |
+          cd windows
+          go test ./...
+
       - name: Build
         env:
           CGO_ENABLED: 0
@@ -53,6 +58,9 @@ jobs:
 
       - name: Install librsvg (for icon generation)
         run: brew install librsvg
+
+      - name: Test
+        run: swift test
 
       - name: Build DMG
         run: bash scripts/build.sh
