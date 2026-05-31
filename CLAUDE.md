@@ -60,7 +60,7 @@ All console-spawning child processes (`wmic`, `taskkill`, `powershell`) use `Hid
 
 ## Key Constraints
 
-- **No tests** — there are no test files; the project has no test suite.
+- **Tests** — Go unit tests live in `windows/*_test.go` (build-tagged `//go:build windows`). They run on the Windows CI runner via `go test ./...`. Swift tests run via `swift test` on the macOS runner. There is no way to execute the Windows tests locally on macOS.
 - **Version must be bumped in multiple files** — forgetting one will cause the update checker to behave incorrectly or CI to produce a mismatched binary.
 - macOS binary is **not notarized**; users must right-click → Open on first launch.
 - Windows build sets `-H windowsgui`, so `fmt.Print` / `log` output goes nowhere — use the file logger (`initLog` / `logf`).
