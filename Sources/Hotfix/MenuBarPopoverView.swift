@@ -31,9 +31,6 @@ struct MenuBarPopoverView: View {
             .padding(.bottom, 12)
             .background(Color(hex: "EDEAE5"))
 
-            Divider()
-                .overlay(Color(hex: "141416").opacity(0.10))
-
             // Process list or empty state
             ScrollView {
                 VStack(spacing: 0) {
@@ -47,9 +44,6 @@ struct MenuBarPopoverView: View {
             .frame(maxHeight: 220)
             .background(Color(hex: "F6F4F0"))
 
-            Divider()
-                .overlay(Color(hex: "141416").opacity(0.10))
-
             // Footer actions
             HStack(spacing: 8) {
                 Button(action: {
@@ -59,6 +53,7 @@ struct MenuBarPopoverView: View {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
                 .buttonStyle(PopoverButtonStyle(isPrimary: false))
+                .focusable(false)
 
                 Spacer()
 
@@ -69,6 +64,7 @@ struct MenuBarPopoverView: View {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
                 .buttonStyle(PopoverButtonStyle(isPrimary: false))
+                .focusable(false)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)

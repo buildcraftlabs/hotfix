@@ -5,10 +5,13 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"os/exec"
 	"sync"
+	"syscall"
 )
 
 //go:embed assets/settings.html
@@ -136,4 +139,19 @@ func setCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+// openSettingsPage opens the embedded settings HTML in the user's default browser.
+func openSettingsPage() {
+	serverMu.Lock()
+	port := serverPort
+	serverMu.Unlock()
+	if port == 0 {
+		return
+	}
+	url := fmt.Sprintf("http://127.0.0.1:%d", port)
+	// Use cmd /c start to open the URL without flashing a console window.
+	cmd := exec.Command("cmd", "/c", "start", "", url)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	_ = cmd.Run()
 }

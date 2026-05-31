@@ -3,6 +3,7 @@
 package main
 
 import (
+	_ "embed"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -13,6 +14,12 @@ import (
 
 	"github.com/getlantern/systray"
 )
+
+//go:embed assets/icon.png
+var iconPNG32 []byte
+
+//go:embed assets/icon16.png
+var iconPNG16 []byte
 
 // --- Tray state ---
 var (
@@ -74,7 +81,7 @@ func onReady() {
 				toggleEnabled()
 
 			case <-mSettings.ClickedCh:
-				go showSettingsWindow()
+				go openSettingsPage()
 
 			case <-mUpdate.ClickedCh:
 				go checkForUpdates()
@@ -155,70 +162,50 @@ func setTrayStatus(label string, alert bool) {
 }
 
 // --- Tray icon ---
-// iconBytes returns a minimal valid ICO as raw bytes so the app compiles
-// without any external asset tool or CGO. This is a 16×16 orange flame-
-// coloured icon encoded as a 1-bit BMP inside an ICO container.
-// For production, replace this with a real .ico embed.
+
+// iconBytes returns an ICO containing the 16x16 and 32x32 flame PNGs.
+// Windows supports PNG frames inside ICO containers (Vista+).
 func iconBytes() []byte {
-	// Minimal 16x16 ICO (1-colour BMP fallback — Windows accepts this).
-	// Generated via hex from a minimal valid ICO file.
-	// This produces a small orange square icon that is clearly visible.
-	return minimalICO()
+	return pngToICO(
+		pngFrame{size: 16, data: iconPNG16},
+		pngFrame{size: 32, data: iconPNG32},
+	)
 }
 
-// minimalICO builds a minimal valid 16x16 ICO file in memory.
-// The image is a solid #C9461E (BuildCraft orange) square.
-func minimalICO() []byte {
-	const (
-		width    = 16
-		height   = 16
-		rowBytes = (width + 7) / 8
-	)
+type pngFrame struct {
+	size int
+	data []byte
+}
 
-	// XOR mask: all 1s → maps to colour[1] (orange)
-	var xorMask [height * rowBytes]byte
-	for i := range xorMask {
-		xorMask[i] = 0xFF
-	}
-	// AND mask: all 0s → fully opaque
-	var andMask [height * rowBytes]byte
-
-	bmpSize := uint32(40 + 8 + len(xorMask) + len(andMask))
-
+// pngToICO wraps one or more PNG images into a valid ICO container.
+func pngToICO(frames ...pngFrame) []byte {
 	var b bytes.Buffer
 	le := binary.LittleEndian
 
-	// ICO header (6 bytes)
-	binary.Write(&b, le, uint16(0))    // reserved
-	binary.Write(&b, le, uint16(1))    // type = ICO
-	binary.Write(&b, le, uint16(1))    // image count
+	n := uint16(len(frames))
+	// ICO header: reserved=0, type=1 (ICO), count=n
+	binary.Write(&b, le, uint16(0))
+	binary.Write(&b, le, uint16(1))
+	binary.Write(&b, le, n)
 
-	// ICONDIRENTRY (16 bytes)
-	b.Write([]byte{byte(width), byte(height), 2, 0}) // w, h, colourCount, reserved
-	binary.Write(&b, le, uint16(1))                  // planes
-	binary.Write(&b, le, uint16(1))                  // bit count
-	binary.Write(&b, le, bmpSize)                    // size of image data
-	binary.Write(&b, le, uint32(6+16))               // offset to image data
+	// Each ICONDIRENTRY is 16 bytes; image data follows all entries.
+	offset := uint32(6 + 16*int(n))
+	for _, f := range frames {
+		sz := byte(f.size) // 0 means 256 for the ICO spec; 32→32
+		b.WriteByte(sz)    // width
+		b.WriteByte(sz)    // height
+		b.WriteByte(0)     // colorCount (0 = no palette)
+		b.WriteByte(0)     // reserved
+		binary.Write(&b, le, uint16(1))           // planes
+		binary.Write(&b, le, uint16(32))          // bitCount
+		binary.Write(&b, le, uint32(len(f.data))) // imageSize
+		binary.Write(&b, le, offset)              // offset
+		offset += uint32(len(f.data))
+	}
 
-	// BITMAPINFOHEADER (40 bytes)
-	binary.Write(&b, le, uint32(40))          // header size
-	binary.Write(&b, le, uint32(width))       // width
-	binary.Write(&b, le, uint32(height*2))    // height ×2 (XOR + AND masks)
-	binary.Write(&b, le, uint16(1))           // planes
-	binary.Write(&b, le, uint16(1))           // bit count
-	binary.Write(&b, le, uint32(0))           // compression
-	binary.Write(&b, le, uint32(0))           // image size
-	binary.Write(&b, le, uint32(0))           // X px/metre
-	binary.Write(&b, le, uint32(0))           // Y px/metre
-	binary.Write(&b, le, uint32(2))           // colours used
-	binary.Write(&b, le, uint32(2))           // colours important
-
-	// Colour table: [0] black transparent, [1] #C9461E in BGR
-	b.Write([]byte{0x00, 0x00, 0x00, 0x00})
-	b.Write([]byte{0x1E, 0x46, 0xC9, 0x00})
-
-	b.Write(xorMask[:])
-	b.Write(andMask[:])
+	for _, f := range frames {
+		b.Write(f.data)
+	}
 
 	return b.Bytes()
 }
