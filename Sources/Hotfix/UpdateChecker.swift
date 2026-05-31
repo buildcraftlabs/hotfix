@@ -166,7 +166,7 @@ class UpdateChecker {
         NSApp.terminate(nil)
     }
 
-    private func isNewerVersion(_ remote: String, than current: String) -> Bool {
+    func isNewerVersion(_ remote: String, than current: String) -> Bool {
         let rv = remote.split(separator: ".").compactMap { Int($0) }
         let cv = current.split(separator: ".").compactMap { Int($0) }
         let maxLen = max(rv.count, cv.count)

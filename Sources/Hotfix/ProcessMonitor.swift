@@ -22,7 +22,7 @@ class ProcessMonitor: ObservableObject {
     @Published var isRunning: Bool = false
 
     /// System processes that must NEVER be killed
-    private let safetyExclusions: Set<String> = [
+    let safetyExclusions: Set<String> = [
         "kernel_task", "WindowServer", "loginwindow", "launchd",
         "mds_stores", "bird", "mds", "mdworker", "mdworker_shared",
         "coreaudiod", "diskarbitrationd", "configd", "bluetoothd",

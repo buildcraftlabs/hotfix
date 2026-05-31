@@ -190,13 +190,13 @@ struct HotProcessRow: View {
         .contentShape(Rectangle())
     }
 
-    private func cpuColor(_ pct: Double) -> Color {
+    func cpuColor(_ pct: Double) -> Color {
         if pct >= 90 { return Color(hex: "C9461E") }
         if pct >= 75 { return Color.orange }
         return Color.yellow
     }
 
-    private func hotDurationLabel(_ seconds: Double) -> String {
+    func hotDurationLabel(_ seconds: Double) -> String {
         if seconds < 60 { return "hot for \(Int(seconds))s" }
         return "hot for \(Int(seconds / 60))m \(Int(seconds.truncatingRemainder(dividingBy: 60)))s"
     }
