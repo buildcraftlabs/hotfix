@@ -106,17 +106,4 @@
     letter-spacing="-4"
   >&gt;_</text>
 
-  <!-- "MCP" label below flame -->
-  <text
-    x="256"
-    y="468"
-    text-anchor="middle"
-    dominant-baseline="middle"
-    font-family="'JetBrains Mono', 'SF Mono', 'Menlo', monospace"
-    font-size="42"
-    font-weight="700"
-    fill="#FFFFFF"
-    opacity="0.60"
-    letter-spacing="6"
-  >MCP</text>
 </svg>

@@ -21,6 +21,7 @@ struct HotfixApp: App {
             MenuBarPopoverView()
                 .environmentObject(monitor)
                 .environmentObject(prefs)
+                .accentColor(Color(hex: "C9461E"))
         } label: {
             MenuBarLabel(isKilling: monitor.isKilling)
         }

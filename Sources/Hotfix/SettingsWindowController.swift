@@ -11,6 +11,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let rootView = SettingsView()
             .environmentObject(ProcessMonitor.shared)
             .environmentObject(PreferencesManager.shared)
+            .accentColor(Color(hex: "C9461E"))
 
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: hostingController)
