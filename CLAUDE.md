@@ -28,8 +28,11 @@ go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
 
 ## Release Process
 
-1. Bump version in **two places simultaneously**: `Sources/Hotfix/UpdateChecker.swift` (`currentVersion`) and `Resources/Info.plist` (macOS), plus `windows/updater.go` (`currentVersion`) and `windows/main.go` (Windows).
-2. Create a GitHub release tagged `v<version>` — the `Build` workflow runs automatically on `macos-latest` and `windows-latest` and attaches both `Hotfix.dmg` and `Hotfix.exe`.
+1. Bump the version everywhere: `Sources/Hotfix/UpdateChecker.swift` (`currentVersion`), `Resources/Info.plist` (`CFBundleShortVersionString` **and** bump `CFBundleVersion`), `windows/updater.go` (`currentVersion`), and the hardcoded version label in `windows/assets/settings.html` (About card). `windows/main.go` only references `updater.go`'s `currentVersion`, so no literal there. (Version-comparison fixtures in `windows/updater_test.go` are not app versions — leave them.)
+2. Create a GitHub release tagged `v<version>` — the `Build` workflow runs automatically on `macos-latest` and `windows-latest`. Each release gets **four** assets: stable `Hotfix.dmg` / `Hotfix.exe` (the site's `releases/latest/download/...` buttons depend on these fixed names) **plus** version+OS-named `Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe`.
+3. A user-facing feature is **not shipped** until this release is cut and the Build run succeeds with all four assets attached — the website serves only released binaries.
+
+> Logs: macOS → `~/Library/Logs/Hotfix/hotfix.log`; Windows → `%APPDATA%\Hotfix\hotfix.log`. Both surface in Settings via an in-app log viewer. Desktop notifications fire on every successful kill (macOS notification center; Windows WinRT toast).
 
 ## Architecture
 
