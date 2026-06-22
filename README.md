@@ -32,6 +32,8 @@ Claude extensions, AI tools, and background daemons run rogue — consuming 50�
 - **Configurable duration** — How long a process must be hot before being killed (default: 60s)
 - **Kill on sleep** — Optionally terminate hot processes when the machine sleeps
 - **Exclusion list** — Protect specific processes from ever being killed
+- **Desktop notifications** — A notification fires whenever a process is terminated
+- **Activity logs** — Events are written to a log file and viewable in-app from Settings (macOS: `~/Library/Logs/Hotfix/hotfix.log`, Windows: `%APPDATA%\Hotfix\hotfix.log`)
 - **Auto-updates** — Checks GitHub releases for new versions on launch
 - **Safety exclusions** — System-critical processes are permanently protected and can never be killed
 
@@ -70,13 +72,11 @@ go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
 
 ## Releasing a New Version
 
-Releasing is semi-automated. The Windows `.exe` is built by CI automatically on every new release.
+Releasing is fully automated. Both binaries are built and attached by CI on every new release.
 
-1. Bump version in `Sources/Hotfix/UpdateChecker.swift` and `Resources/Info.plist` (macOS)
-2. Bump version in `windows/main.go` (Windows)
-3. Build the macOS DMG: `bash scripts/build.sh`
-4. Create a GitHub release tagged `v<version>` and attach `dist/Hotfix.dmg`
-5. The `Build Windows` GitHub Actions workflow runs automatically and attaches `Hotfix.exe` to the release
+1. Bump the version in `Sources/Hotfix/UpdateChecker.swift`, `Resources/Info.plist` (short string + build number), `windows/updater.go`, and the About label in `windows/assets/settings.html`
+2. Create a GitHub release tagged `v<version>`
+3. The `Build` workflow runs on `macos-latest` + `windows-latest` and attaches **four** assets: stable `Hotfix.dmg` / `Hotfix.exe` (the download links above point to these) plus version+OS-named `Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe`
 
 Users on both platforms will be notified of the update on next launch.
 
