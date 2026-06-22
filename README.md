@@ -74,9 +74,9 @@ go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
 
 Releasing is fully automated. Both binaries are built and attached by CI on every new release.
 
-1. Bump the version in `Sources/Hotfix/UpdateChecker.swift`, `Resources/Info.plist` (short string + build number), `windows/updater.go`, the About label in `windows/assets/settings.html`, and the four download-button URLs in `docs/index.html` (`Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe`)
+1. Bump the version in `Sources/Hotfix/UpdateChecker.swift`, `Resources/Info.plist` (short string + build number), `windows/updater.go`, and the About label in `windows/assets/settings.html`. (The `docs/index.html` download links are bumped automatically by CI — see step 3.)
 2. Create a GitHub release tagged `v<version>`
-3. The `Build` workflow runs on `macos-latest` + `windows-latest` and attaches **four** assets: stable `Hotfix.dmg` / `Hotfix.exe` plus version+OS-named `Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe` (the site's download buttons point to the versioned names, so they 404 until the matching release is published)
+3. The `Build` workflow runs on `macos-latest` + `windows-latest` and attaches **four** assets: stable `Hotfix.dmg` / `Hotfix.exe` plus version+OS-named `Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe`. The site's download buttons point to the versioned names; the `update-site` job then rewrites those URLs in `docs/index.html` to the new version and pushes to `main`
 
 Users on both platforms will be notified of the update on next launch.
 

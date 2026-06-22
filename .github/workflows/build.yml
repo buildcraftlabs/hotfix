@@ -92,3 +92,40 @@ jobs:
           files: |
             dist/Hotfix.dmg
             dist/Hotfix-${{ github.event.release.tag_name }}-macOS.dmg
+
+  # On every release, rewrite the site's download buttons to the new
+  # version+OS-named assets and push the change back to main (GitHub Pages
+  # serves docs/ from main). Keeps docs/index.html links from going stale.
+  update-site:
+    needs: [build-windows, build-macos]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Bump download links to ${{ github.event.release.tag_name }}
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          sed -i -E \
+            -e "s#Hotfix-v[0-9]+\.[0-9]+\.[0-9]+-macOS\.dmg#Hotfix-${TAG}-macOS.dmg#g" \
+            -e "s#Hotfix-v[0-9]+\.[0-9]+\.[0-9]+-Windows\.exe#Hotfix-${TAG}-Windows.exe#g" \
+            docs/index.html
+
+      - name: Commit and push if changed
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if git diff --quiet -- docs/index.html; then
+            echo "Download links already point to ${TAG}; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git commit -m "site: bump download links to ${TAG} [skip ci]"
+          git push origin main
