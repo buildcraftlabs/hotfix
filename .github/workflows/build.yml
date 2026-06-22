@@ -48,11 +48,17 @@ jobs:
           name: Hotfix-Windows
           path: dist/Hotfix.exe
 
+      - name: Prepare versioned release asset
+        if: github.event_name == 'release'
+        run: Copy-Item dist/Hotfix.exe "dist/Hotfix-${{ github.event.release.tag_name }}-Windows.exe"
+
       - name: Upload to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/Hotfix.exe
+          files: |
+            dist/Hotfix.exe
+            dist/Hotfix-${{ github.event.release.tag_name }}-Windows.exe
 
   build-macos:
     runs-on: macos-latest
@@ -75,8 +81,14 @@ jobs:
           name: Hotfix-macOS
           path: dist/Hotfix.dmg
 
+      - name: Prepare versioned release asset
+        if: github.event_name == 'release'
+        run: cp dist/Hotfix.dmg "dist/Hotfix-${{ github.event.release.tag_name }}-macOS.dmg"
+
       - name: Upload to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/Hotfix.dmg
+          files: |
+            dist/Hotfix.dmg
+            dist/Hotfix-${{ github.event.release.tag_name }}-macOS.dmg
