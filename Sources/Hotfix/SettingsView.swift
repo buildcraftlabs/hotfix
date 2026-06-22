@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @EnvironmentObject var prefs: PreferencesManager
@@ -291,6 +292,37 @@ struct SettingsView: View {
 
                 BCDivider()
 
+                // Logs row
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Logs")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: "141416"))
+                        Text("Activity and termination history")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(Color(hex: "141416").opacity(0.45))
+                    }
+                    Spacer()
+                    Button(action: openLogFile) {
+                        Text("View Logs")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: "C9461E"))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7)
+                                    .strokeBorder(Color(hex: "C9461E").opacity(0.40), lineWidth: 1)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 7)
+                                            .fill(Color(hex: "C9461E").opacity(0.07))
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                BCDivider()
+
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Built by BuildCraft Labs")
@@ -323,6 +355,14 @@ struct SettingsView: View {
         let m = Int(seconds) / 60
         let s = Int(seconds) % 60
         return s == 0 ? "\(m)m" : "\(m)m \(s)s"
+    }
+
+    private func openLogFile() {
+        guard let url = Log.shared.fileURL else { return }
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+        }
+        NSWorkspace.shared.open(url)
     }
 
     private func addExclusion() {

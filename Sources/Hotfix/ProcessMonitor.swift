@@ -41,6 +41,7 @@ class ProcessMonitor: ObservableObject {
         guard !isRunning else { return }
         isRunning = true
         hotStartTimes = [:]
+        logf("monitor: started (threshold \(PreferencesManager.shared.cpuThreshold)%, kill after \(PreferencesManager.shared.killDuration)s)")
 
         // Register for sleep notification
         sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -69,6 +70,7 @@ class ProcessMonitor: ObservableObject {
     }
 
     func stop() {
+        logf("monitor: stopped")
         isRunning = false
         timer?.invalidate()
         timer = nil
@@ -87,6 +89,9 @@ class ProcessMonitor: ObservableObject {
         guard PreferencesManager.shared.killOnSleep else { return }
         // Kill all currently tracked hot processes immediately
         let toKill = hotProcesses
+        if !toKill.isEmpty {
+            logf("monitor: sleep detected — killing \(toKill.count) hot process(es)")
+        }
         for proc in toKill {
             terminateProcess(proc)
         }
@@ -166,10 +171,12 @@ class ProcessMonitor: ObservableObject {
 
     // MARK: - Termination
     func terminateProcess(_ proc: HotProcess) {
+        logf("monitor: killing \(proc.name) (PID \(proc.pid)) — \(String(format: "%.1f", proc.cpuPercent))% CPU for \(String(format: "%.0f", proc.hotSeconds))s")
         let result = kill(proc.pid, SIGTERM)
         if result == 0 {
             lastKilledName = proc.name
             isKilling = true
+            logf("monitor: killed \(proc.name) (PID \(proc.pid))")
 
             // Reset isKilling visual after 2 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
@@ -177,6 +184,8 @@ class ProcessMonitor: ObservableObject {
             }
 
             sendKillNotification(name: proc.name, pid: proc.pid, cpu: proc.cpuPercent)
+        } else {
+            logf("monitor: kill failed for \(proc.name) (PID \(proc.pid)) — errno \(errno)")
         }
     }
 
@@ -194,7 +203,7 @@ class ProcessMonitor: ObservableObject {
         )
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
-                print("[Hotfix] Notification error: \(error.localizedDescription)")
+                logf("notification error: \(error.localizedDescription)")
             }
         }
     }
@@ -213,7 +222,7 @@ class ProcessMonitor: ObservableObject {
             try process.run()
             process.waitUntilExit()
         } catch {
-            print("[Hotfix] ps error: \(error)")
+            logf("ps error: \(error)")
             return []
         }
 

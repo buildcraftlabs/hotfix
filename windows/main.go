@@ -133,8 +133,11 @@ func syncToggleCheck() {
 }
 
 // notifyKilled is called from monitor.go after a successful taskkill.
-// It updates the tray tooltip and status label temporarily.
+// It shows a desktop toast and updates the tray tooltip and status label.
 func notifyKilled(name string, pid int, cpu float64) {
+	// Desktop toast notification (non-blocking).
+	notifyKilledToast(name, pid, cpu)
+
 	msg := fmt.Sprintf("Killed: %s", name)
 	tooltip := fmt.Sprintf("Hotfix — Killed %s (PID %d, %.0f%% CPU)", name, pid, cpu)
 
@@ -217,15 +220,23 @@ var (
 	logMu   sync.Mutex
 )
 
-func initLog() {
+// logFilePath returns the absolute path to the log file, or "" if it cannot be
+// determined. Used by both initLog and the settings server's /log endpoint.
+func logFilePath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "Hotfix", "hotfix.log")
+}
+
+func initLog() {
+	path := logFilePath()
+	if path == "" {
 		return
 	}
-	logDir := filepath.Join(dir, "Hotfix")
-	_ = os.MkdirAll(logDir, 0755)
-	f, err := os.OpenFile(filepath.Join(logDir, "hotfix.log"),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	_ = os.MkdirAll(filepath.Dir(path), 0755)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return
 	}

@@ -7,7 +7,14 @@ struct HotfixApp: App {
     @StateObject private var prefs = PreferencesManager.shared
 
     init() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        logf("Hotfix starting (version \(UpdateChecker.currentVersion))")
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error {
+                logf("notification authorization error: \(error.localizedDescription)")
+            } else {
+                logf("notification authorization \(granted ? "granted" : "denied")")
+            }
+        }
 
         if PreferencesManager.shared.isEnabled {
             DispatchQueue.main.async {

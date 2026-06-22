@@ -42,6 +42,7 @@ The app is a `MenuBarExtra`-only app (no Dock icon). Core objects are singletons
 - **`UpdateChecker`** — Hits the GitHub releases API on launch; compares semver tags.
 - **`SettingsWindowController`** / **`SettingsView`** — Native SwiftUI settings panel opened from the menu.
 - **`MenuBarPopoverView`** — The popover shown when clicking the tray flame icon. Shows hot processes and quick toggles.
+- **`Log`** (`Logger.swift`) — Thread-safe file logger (`logf("…")`) that appends to `~/Library/Logs/Hotfix/hotfix.log` (and stderr). Mirrors the Windows logger format. Desktop notifications use `UNUserNotificationCenter` (authorization requested at launch).
 
 Safety exclusions (kernel_task, WindowServer, Finder, etc.) are hardcoded in `ProcessMonitor` and can never be overridden by user settings.
 
@@ -55,6 +56,7 @@ A single Go binary with `//go:build windows` on every file. No CGO; uses `github
 - **`settings_window.go`** — Opens a native Win32 window (`wui`) for settings. Must be called and driven from the same OS thread (`runtime.LockOSThread`).
 - **`server.go`** — Local HTTP server on a random port (`127.0.0.1:0`) serving the embedded `assets/settings.html` and a `/config` + `/save` JSON API. Used as a fallback settings UI.
 - **`updater.go`** — GitHub releases API check; self-updates by downloading the new `.exe` to a temp path and launching it with a replace-and-restart batch script.
+- **`notify.go`** — Desktop toast notifications via hidden PowerShell (WinRT `Windows.UI.Notifications` toast, with a `NotifyIcon` balloon-tip fallback). Title/body are passed through env vars to avoid quoting/injection. Called from `notifyKilled` in addition to the tray-label update. File logging is handled by `initLog`/`logf` in `main.go` (writes to `%APPDATA%\Hotfix\hotfix.log`).
 
 All console-spawning child processes (`wmic`, `taskkill`, `powershell`) use `HideWindow: true` in `SysProcAttr` to prevent flash windows (since the binary is built with `-H windowsgui`).
 

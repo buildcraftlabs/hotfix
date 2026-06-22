@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -43,6 +44,7 @@ func startServer() int {
 		mux.HandleFunc("/", handleSettings)
 		mux.HandleFunc("/config", handleConfig)
 		mux.HandleFunc("/save", handleSave)
+		mux.HandleFunc("/log", handleLog)
 
 		go func() {
 			if err := http.Serve(ln, mux); err != nil {
@@ -70,6 +72,28 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// handleLog serves the Hotfix log file as plain text so it can be viewed in
+// the browser from the settings page.
+func handleLog(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	path := logFilePath()
+	if path == "" {
+		_, _ = w.Write([]byte("Log file location unavailable."))
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) == 0 {
+		_, _ = w.Write([]byte("No log entries yet."))
+		return
+	}
 	_, _ = w.Write(data)
 }
 
