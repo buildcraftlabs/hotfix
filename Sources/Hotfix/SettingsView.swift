@@ -6,6 +6,7 @@ struct SettingsView: View {
     @EnvironmentObject var monitor: ProcessMonitor
     @State private var newExclusion: String = ""
     @State private var showExclusionError: Bool = false
+    @State private var logText: String = ""
 
     var body: some View {
         ZStack {
@@ -20,6 +21,7 @@ struct SettingsView: View {
                     VStack(spacing: 16) {
                         protectionSection
                         exclusionsSection
+                        logsSection
                         aboutSection
                     }
                     .padding(.horizontal, 24)
@@ -257,6 +259,54 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Logs section
+    @ViewBuilder
+    private var logsSection: some View {
+        SettingsCard(title: "Logs") {
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Recent activity and process terminations.")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(Color(hex: "141416").opacity(0.45))
+                    Spacer()
+                    Button(action: loadLogText) {
+                        Text("Refresh")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: "C9461E"))
+                    }
+                    .buttonStyle(.plain)
+                    Text("·")
+                        .foregroundStyle(Color(hex: "141416").opacity(0.25))
+                    Button(action: openLogFile) {
+                        Text("Open in Console")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: "C9461E"))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ScrollView {
+                    Text(logText.isEmpty ? "No log entries yet." : logText)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color(hex: "141416").opacity(0.80))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                }
+                .frame(height: 160)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(hex: "F6F4F0"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color(hex: "141416").opacity(0.10), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .onAppear(perform: loadLogText)
+    }
+
     // MARK: - About section
     @ViewBuilder
     private var aboutSection: some View {
@@ -274,37 +324,6 @@ struct SettingsView: View {
                     Spacer()
                     Button(action: { UpdateChecker.shared.checkForUpdates(userInitiated: true) }) {
                         Text("Check for Updates")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color(hex: "C9461E"))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7)
-                                    .strokeBorder(Color(hex: "C9461E").opacity(0.40), lineWidth: 1)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 7)
-                                            .fill(Color(hex: "C9461E").opacity(0.07))
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                BCDivider()
-
-                // Logs row
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Logs")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color(hex: "141416"))
-                        Text("Activity and termination history")
-                            .font(.system(size: 11, design: .rounded))
-                            .foregroundStyle(Color(hex: "141416").opacity(0.45))
-                    }
-                    Spacer()
-                    Button(action: openLogFile) {
-                        Text("View Logs")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color(hex: "C9461E"))
                             .padding(.horizontal, 12)
@@ -363,6 +382,17 @@ struct SettingsView: View {
             FileManager.default.createFile(atPath: url.path, contents: nil)
         }
         NSWorkspace.shared.open(url)
+    }
+
+    /// Load the tail of the log file (last 200 lines) into the in-page viewer.
+    private func loadLogText() {
+        guard let url = Log.shared.fileURL,
+              let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            logText = ""
+            return
+        }
+        let lines = contents.split(separator: "\n", omittingEmptySubsequences: true)
+        logText = lines.suffix(200).joined(separator: "\n")
     }
 
     private func addExclusion() {

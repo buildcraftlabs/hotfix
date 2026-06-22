@@ -471,6 +471,30 @@
       color: var(--text);
     }
 
+    /* ── Logs viewer ── */
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 20px 8px;
+    }
+
+    .log-view {
+      margin: 0 20px 16px;
+      height: 200px;
+      overflow: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.72rem;
+      line-height: 1.5;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     /* ── Status bar / Save button ── */
     .save-bar {
       position: fixed;
@@ -657,6 +681,24 @@
     </div>
   </div>
 
+  <!-- Logs card -->
+  <div class="card" id="logs-card">
+    <div class="card-header">
+      <div class="card-header-icon">📋</div>
+      <div>
+        <h2>Logs</h2>
+        <p>Recent activity and process terminations</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="log-toolbar">
+        <button class="btn-add" id="log-refresh-btn" type="button">Refresh</button>
+        <a class="about-link" id="log-open-link" href="/log" target="_blank">Open in new tab</a>
+      </div>
+      <pre class="log-view" id="log-view">Loading…</pre>
+    </div>
+  </div>
+
   <!-- About card -->
   <div class="card" id="about-card">
     <div class="card-header">
@@ -679,12 +721,6 @@
         <span class="about-item-label">Updates</span>
         <span class="about-item-value">
           <a class="about-link" id="check-updates-link" href="#">Check for Updates</a>
-        </span>
-      </div>
-      <div class="about-item">
-        <span class="about-item-label">Logs</span>
-        <span class="about-item-value">
-          <a class="about-link" id="view-logs-link" href="/log" target="_blank">View Logs</a>
         </span>
       </div>
       <div class="about-built">
@@ -895,6 +931,27 @@
     }
   });
 
+  // ── Logs viewer ──
+  const $logView      = document.getElementById('log-view');
+  const $logRefreshBtn = document.getElementById('log-refresh-btn');
+
+  async function loadLogs() {
+    $logView.textContent = 'Loading…';
+    try {
+      const resp = await fetch('/log', { cache: 'no-store' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      // Show the tail (last 200 lines) so the newest entries are visible.
+      const lines = text.replace(/\r\n/g, '\n').split('\n').filter((l) => l.length > 0);
+      $logView.textContent = lines.length ? lines.slice(-200).join('\n') : 'No log entries yet.';
+      $logView.scrollTop = $logView.scrollHeight;
+    } catch (err) {
+      $logView.textContent = 'Could not load logs: ' + err.message;
+    }
+  }
+
+  $logRefreshBtn.addEventListener('click', loadLogs);
+
   // ── Load config on startup ──
   async function loadConfig() {
     try {
@@ -912,6 +969,7 @@
   }
 
   loadConfig();
+  loadLogs();
 </script>
 </body>
 </html>
