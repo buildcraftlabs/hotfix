@@ -41,6 +41,25 @@ var safetyExclusions = map[string]bool{
 	"MsMpEng":   true, // Windows Defender — never kill
 }
 
+// baseProcName strips the perf-counter instance suffix ("#1", "#2", …) that
+// Win32_PerfFormattedData_PerfProc_Process appends to duplicate image names
+// (e.g. "svchost#3", "Code#1"). Matching must happen on the base name or a hot
+// second instance of a protected/whitelisted process would slip through.
+func baseProcName(name string) string {
+	if i := strings.IndexByte(name, '#'); i >= 0 {
+		return name[:i]
+	}
+	return name
+}
+
+// isProtected reports whether a process must never be killed regardless of user
+// config. It is case-insensitive and ignores perf-counter "#N" instance
+// suffixes, so "svchost#5" is protected exactly like "svchost".
+func isProtected(name string) bool {
+	base := baseProcName(name)
+	return safetyExclusions[base] || safetyExclusions[strings.ToLower(base)]
+}
+
 // HotProcess tracks a process that has been above the CPU threshold.
 type HotProcess struct {
 	PID      int
@@ -133,10 +152,10 @@ func checkProcesses() {
 		if e.PID < 10 {
 			continue
 		}
-		if safetyExclusions[e.Name] || safetyExclusions[strings.ToLower(e.Name)] {
+		if isProtected(e.Name) {
 			continue
 		}
-		if wl[strings.ToLower(e.Name)] {
+		if wl[strings.ToLower(baseProcName(e.Name))] {
 			continue
 		}
 
@@ -184,22 +203,30 @@ type processEntry struct {
 	CPU  float64 // percent
 }
 
-// queryProcesses runs WMIC and parses CPU percentages for all processes.
+// queryProcesses reads per-process CPU usage and parses it for all processes.
+//
+// It queries the Win32_PerfFormattedData_PerfProc_Process performance class via
+// PowerShell CIM. WMIC (the original backend) was deprecated and is no longer
+// present on Windows 11 24H2+, so shelling out to `wmic` returns "executable
+// file not found" and silently kills monitoring. Get-CimInstance hits the same
+// WMI class and is available on every supported Windows version.
 func queryProcesses() ([]processEntry, error) {
-	// WMIC returns CSV with a blank first line, then a header, then data.
-	// Columns: Node,IDProcess,Name,PercentProcessorTime
-	cmd := hiddenCmd("wmic",
-		"path", "Win32_PerfFormattedData_PerfProc_Process",
-		"get", "IDProcess,Name,PercentProcessorTime",
-		"/format:csv",
-	)
+	// ConvertTo-Csv emits: "IDProcess","Name","PercentProcessorTime" header
+	// followed by quoted rows — parseWMICCSV handles the quoting and the
+	// (now absent) Node column transparently.
+	const ps = `Get-CimInstance Win32_PerfFormattedData_PerfProc_Process | ` +
+		`Select-Object IDProcess,Name,PercentProcessorTime | ` +
+		`ConvertTo-Csv -NoTypeInformation`
+
+	cmd := hiddenCmd("powershell", "-NonInteractive", "-NoProfile",
+		"-ExecutionPolicy", "Bypass", "-Command", ps)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	// Suppress stderr so it doesn't appear anywhere.
 	cmd.Stderr = io.Discard
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("wmic: %w", err)
+		return nil, fmt.Errorf("perf query: %w", err)
 	}
 
 	return parseWMICCSV(out.String())
@@ -219,10 +246,14 @@ func parseWMICCSV(raw string) ([]processEntry, error) {
 
 	lines := strings.Split(raw, "\n")
 
-	// Find the header line (starts with "Node," case-insensitive).
+	// Find the header line. Detect it by the presence of the key column names
+	// rather than a leading "Node," so the parser works for both the legacy
+	// WMIC layout (Node,IDProcess,Name,PercentProcessorTime) and the
+	// PowerShell ConvertTo-Csv layout (quoted, no Node column).
 	startIdx := -1
 	for i, line := range lines {
-		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "node,") {
+		l := strings.ToLower(line)
+		if strings.Contains(l, "idprocess") && strings.Contains(l, "percentprocessortime") {
 			startIdx = i
 			break
 		}

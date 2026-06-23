@@ -152,8 +152,17 @@ func handleSave(w http.ResponseWriter, r *http.Request) {
 	logf("server: config saved (enabled=%v, threshold=%.0f%%, kill_after=%.0fs)",
 		cfg.Enabled, cfg.CPUThreshold, cfg.KillDuration)
 
-	// Restart monitor if the enabled state matches what we want.
-	// The tray reads getConfig() directly, so just flush is enough.
+	// Start or stop the monitor to match the new enabled state. Both calls are
+	// idempotent, so saving repeatedly (or saving the same state) is safe. This
+	// is required because the monitor goroutine is only launched at startup when
+	// monitoring is enabled — without this, toggling Enabled on from the web UI
+	// would not begin monitoring until the app was restarted.
+	if cfg.Enabled {
+		startMonitor()
+	} else {
+		stopMonitor()
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"ok":true}`))
