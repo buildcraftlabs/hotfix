@@ -83,7 +83,7 @@ func startMonitor() {
 	monitorOnce.Do(func() {
 		monitorStop = make(chan struct{})
 		stop := monitorStop // capture for goroutine
-		go monitorLoop(stop)
+		safeGo("monitor-loop", func() { monitorLoop(stop) })
 	})
 }
 
@@ -359,7 +359,7 @@ func killAllHot() {
 // PowerShell and calls killAllHot when KillOnSleep is enabled.
 // This uses the Win32_PowerManagementEvent WMI event (pure PowerShell, no CGO).
 func watchSleep() {
-	go func() {
+	safeGo("sleep-watcher", func() {
 		// PowerShell script: block until a suspend event fires, then print "sleep".
 		// Win32_PowerManagementEvent EventType 4 = suspend.
 		ps := `$q = "SELECT * FROM Win32_PowerManagementEvent WHERE EventType = 4";` +
@@ -404,7 +404,7 @@ func watchSleep() {
 		}
 		_ = cmd.Wait()
 		logf("sleep-watcher: exited")
-	}()
+	})
 }
 
 // max3 returns the largest of three ints (avoids importing math).

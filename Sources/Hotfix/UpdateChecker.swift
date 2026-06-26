@@ -3,14 +3,30 @@ import AppKit
 
 class UpdateChecker {
     static let shared = UpdateChecker()
-    static let currentVersion = "1.0.6"
+    static let currentVersion = "1.0.7"
 
     private let releasesURL = URL(string: "https://api.github.com/repos/buildcraftlabs/hotfix/releases/latest")!
     private let releasesPageURL = URL(string: "https://github.com/buildcraftlabs/hotfix/releases/latest")!
 
+    private var updateTimer: Timer?
+    private let autoCheckInterval: TimeInterval = 6 * 60 * 60  // 6 hours
+
     private init() {}
 
-    func checkForUpdates(userInitiated: Bool = false) {
+    /// Starts silent background updates: an immediate check plus a repeating
+    /// check every `autoCheckInterval`. When a newer release is found it is
+    /// downloaded, installed, and the app relaunches — no prompts.
+    func startAutomaticUpdates() {
+        checkForUpdates(automatic: true)
+        updateTimer?.invalidate()
+        let t = Timer(timeInterval: autoCheckInterval, repeats: true) { [weak self] _ in
+            self?.checkForUpdates(automatic: true)
+        }
+        RunLoop.main.add(t, forMode: .common)
+        updateTimer = t
+    }
+
+    func checkForUpdates(userInitiated: Bool = false, automatic: Bool = false) {
         var request = URLRequest(url: releasesURL)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("Hotfix/\(Self.currentVersion)", forHTTPHeaderField: "User-Agent")
@@ -18,12 +34,12 @@ class UpdateChecker {
 
         URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             DispatchQueue.main.async {
-                self?.handleResponse(data: data, error: error, userInitiated: userInitiated)
+                self?.handleResponse(data: data, error: error, userInitiated: userInitiated, automatic: automatic)
             }
         }.resume()
     }
 
-    private func handleResponse(data: Data?, error: Error?, userInitiated: Bool) {
+    private func handleResponse(data: Data?, error: Error?, userInitiated: Bool, automatic: Bool) {
         if let error = error {
             if userInitiated {
                 showAlert(title: "Update Check Failed",
@@ -50,6 +66,17 @@ class UpdateChecker {
                 .flatMap { $0["browser_download_url"] as? String }
                 .flatMap { URL(string: $0) }
 
+            // Silent background update: download, install, relaunch — no prompts.
+            if automatic {
+                if let url = dmgURL {
+                    logf("updater: auto-installing \(remoteVersion) (have \(Self.currentVersion))")
+                    downloadAndInstall(from: url, version: remoteVersion, silent: true)
+                } else {
+                    logf("updater: \(remoteVersion) available but no .dmg asset; skipping auto-install")
+                }
+                return
+            }
+
             let alert = NSAlert()
             alert.messageText = "Update Available"
             alert.informativeText = "Hotfix \(remoteVersion) is available (you have \(Self.currentVersion)).\n\nInstall in the background and relaunch?"
@@ -72,27 +99,43 @@ class UpdateChecker {
         }
     }
 
-    private func downloadAndInstall(from url: URL, version: String) {
-        showAlert(title: "Downloading Update",
-                  message: "Hotfix \(version) is downloading. The app will relaunch automatically when the update is ready.",
-                  style: .informational)
+    private func downloadAndInstall(from url: URL, version: String, silent: Bool = false) {
+        if !silent {
+            showAlert(title: "Downloading Update",
+                      message: "Hotfix \(version) is downloading. The app will relaunch automatically when the update is ready.",
+                      style: .informational)
+        }
 
         URLSession.shared.downloadTask(with: url) { [weak self] tempURL, _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error {
-                    self.showAlert(title: "Download Failed",
-                                   message: error.localizedDescription,
-                                   style: .warning)
+                    if silent {
+                        logf("updater: auto-update download failed: \(error.localizedDescription)")
+                    } else {
+                        self.showAlert(title: "Download Failed",
+                                       message: error.localizedDescription,
+                                       style: .warning)
+                    }
                     return
                 }
                 guard let tempURL = tempURL else { return }
-                self.installDMG(at: tempURL, version: version)
+                self.installDMG(at: tempURL, version: version, silent: silent)
             }
         }.resume()
     }
 
-    private func installDMG(at dmgURL: URL, version: String) {
+    /// Reports an install failure: logs it during silent auto-update, or shows a
+    /// modal alert during a user-initiated update.
+    private func installFailed(_ message: String, silent: Bool) {
+        if silent {
+            logf("updater: auto-update install failed: \(message)")
+        } else {
+            showAlert(title: "Install Failed", message: message, style: .critical)
+        }
+    }
+
+    private func installDMG(at dmgURL: URL, version: String, silent: Bool = false) {
         let tmp = NSTemporaryDirectory()
         let stableDMG = URL(fileURLWithPath: tmp).appendingPathComponent("Hotfix_\(version).dmg")
         let stagedApp = URL(fileURLWithPath: tmp).appendingPathComponent("Hotfix_update.app")
@@ -101,9 +144,7 @@ class UpdateChecker {
         do {
             try FileManager.default.moveItem(at: dmgURL, to: stableDMG)
         } catch {
-            showAlert(title: "Install Failed",
-                      message: "Could not stage download: \(error.localizedDescription)",
-                      style: .critical)
+            installFailed("Could not stage download: \(error.localizedDescription)", silent: silent)
             return
         }
 
@@ -114,7 +155,7 @@ class UpdateChecker {
         mount.standardOutput = Pipe()
         mount.standardError = Pipe()
         do { try mount.run() } catch {
-            showAlert(title: "Install Failed", message: "Could not mount update.", style: .critical)
+            installFailed("Could not mount update.", silent: silent)
             return
         }
         mount.waitUntilExit()
@@ -138,7 +179,7 @@ class UpdateChecker {
         try? FileManager.default.removeItem(at: stableDMG)
 
         guard copy.terminationStatus == 0 else {
-            showAlert(title: "Install Failed", message: "Could not copy update.", style: .critical)
+            installFailed("Could not copy update.", silent: silent)
             return
         }
 

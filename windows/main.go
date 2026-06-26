@@ -34,6 +34,9 @@ func main() {
 	initLog()
 	logf("Hotfix starting (version %s)", currentVersion)
 
+	// If a previous run left a crash behind, surface it for one-click reporting.
+	reportPendingCrash()
+
 	// Load config.
 	configMu.Lock()
 	current = loadConfig()
@@ -73,18 +76,30 @@ func onReady() {
 	// Watch for system sleep events (KillOnSleep support).
 	watchSleep()
 
-	// Event loop.
+	// Begin silent background auto-updates (launch check + periodic poll).
+	startAutoUpdater()
+
+	// Event loop. A panic while handling a click is captured and reported
+	// rather than silently killing the tray (panics go to a discarded stderr
+	// under -H windowsgui). Each action is wrapped so one bad handler can't
+	// take down the loop.
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				recordCrash("event-loop", r)
+				reportPendingCrash()
+			}
+		}()
 		for {
 			select {
 			case <-mToggle.ClickedCh:
-				toggleEnabled()
+				safe("toggle", toggleEnabled)
 
 			case <-mSettings.ClickedCh:
-				go openSettingsPage()
+				safeGo("settings", openSettingsPage)
 
 			case <-mUpdate.ClickedCh:
-				go checkForUpdates()
+				safeGo("update", func() { checkForUpdates(false) })
 
 			case <-mQuit.ClickedCh:
 				systray.Quit()

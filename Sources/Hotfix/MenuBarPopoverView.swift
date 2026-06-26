@@ -68,7 +68,7 @@ struct MenuBarPopoverView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(hex: "EDEAE5"))
+            .background(Color(hex: "F6F4F0"))
         }
         .frame(width: 300)
         .background(Color(hex: "F6F4F0"))
@@ -79,17 +79,17 @@ struct MenuBarPopoverView: View {
     private var statusIndicator: some View {
         HStack(spacing: 5) {
             Circle()
-                .fill(prefs.isEnabled ? Color.green : Color(hex: "141416").opacity(0.25))
+                .fill(prefs.isEnabled ? Color(hex: "4ADE80") : Color(hex: "141416").opacity(0.25))
                 .frame(width: 7, height: 7)
             Text(prefs.isEnabled ? "Watching" : "Paused")
                 .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundStyle(prefs.isEnabled ? Color.green : Color(hex: "141416").opacity(0.45))
+                .foregroundStyle(prefs.isEnabled ? Color.white : Color(hex: "141416").opacity(0.45))
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill(prefs.isEnabled ? Color.green.opacity(0.10) : Color(hex: "141416").opacity(0.06))
+                .fill(prefs.isEnabled ? Color(hex: "14532D") : Color(hex: "141416").opacity(0.06))
         )
     }
 

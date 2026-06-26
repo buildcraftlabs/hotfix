@@ -91,8 +91,15 @@ log "Generating app icon..."
 
 mkdir -p "$ICONSET_DIR"
 
+# Preferred path: render the same SF Symbol flame used in the menu bar
+# (flame.fill on a dark rounded rect) via generate-icon.swift, so the
+# Applications icon matches the tray icon. Falls back to the legacy SVG
+# pipeline only if the Swift renderer is unavailable.
+ICON_GEN="$SCRIPT_DIR/generate-icon.swift"
+if command -v swift &>/dev/null && [[ -f "$ICON_GEN" ]] && swift "$ICON_GEN" "$ICONSET_DIR" &>/dev/null; then
+    log "Rendered app icon from SF Symbol flame (generate-icon.swift)"
 # Try rsvg-convert first (librsvg, highest quality)
-if command -v rsvg-convert &>/dev/null; then
+elif command -v rsvg-convert &>/dev/null; then
     log "Using rsvg-convert for SVG→PNG conversion"
     for size in 16 32 64 128 256 512 1024; do
         rsvg-convert -w "$size" -h "$size" "$SVG_SOURCE" -o "$ICONSET_DIR/icon_${size}x${size}.png"

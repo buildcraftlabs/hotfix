@@ -21,6 +21,11 @@ struct HotfixApp: App {
                 ProcessMonitor.shared.start()
             }
         }
+
+        // Silent background auto-update: check at launch, then every 6 hours.
+        DispatchQueue.main.async {
+            UpdateChecker.shared.startAutomaticUpdates()
+        }
     }
 
     var body: some Scene {

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	currentVersion  = "1.0.6"
+	currentVersion  = "1.0.7"
 	releasesAPIURL  = "https://api.github.com/repos/buildcraftlabs/hotfix/releases/latest"
 	releasesPageURL = "https://github.com/buildcraftlabs/hotfix/releases/latest"
 )
@@ -31,9 +31,29 @@ type githubAsset struct {
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
+// autoUpdateInterval is how often the silent background updater polls GitHub.
+const autoUpdateInterval = 6 * time.Hour
+
+// startAutoUpdater runs silent background update checks: one shortly after
+// launch, then every autoUpdateInterval. A newer release is downloaded and
+// installed and the app relaunches automatically (see downloadAndReplace).
+func startAutoUpdater() {
+	safeGo("auto-updater", func() {
+		time.Sleep(30 * time.Second) // let startup settle before the first check
+		checkForUpdates(true)
+		t := time.NewTicker(autoUpdateInterval)
+		defer t.Stop()
+		for range t.C {
+			checkForUpdates(true)
+		}
+	})
+}
+
 // checkForUpdates fetches the latest GitHub release. If a newer version is
 // found it downloads the .exe in the background and self-replaces on exit.
-func checkForUpdates() {
+// When auto is true the check is silent: an up-to-date result produces no tray
+// status change (so the periodic poll doesn't flicker the menu label).
+func checkForUpdates(auto bool) {
 	logf("updater: checking for updates (current: %s)", currentVersion)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -72,8 +92,10 @@ func checkForUpdates() {
 
 	if !isNewer(tag, currentVersion) {
 		logf("updater: already up to date")
-		setTrayStatus("Up to date", false)
-		time.AfterFunc(3*time.Second, func() { setTrayStatus("Watching", false) })
+		if !auto {
+			setTrayStatus("Up to date", false)
+			time.AfterFunc(3*time.Second, func() { setTrayStatus("Watching", false) })
+		}
 		return
 	}
 
