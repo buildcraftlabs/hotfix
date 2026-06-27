@@ -12,6 +12,10 @@ struct HotfixApp: App {
         CrashReporter.install()
 
         logf("Hotfix starting (version \(UpdateChecker.currentVersion))")
+        // A delegate is required for banners to appear while the app is active.
+        // Without it, macOS silently routes notifications straight to Notification
+        // Center whenever Hotfix is frontmost (e.g. the popover/settings is open).
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error {
                 logf("notification authorization error: \(error.localizedDescription)")
@@ -42,6 +46,19 @@ struct HotfixApp: App {
             MenuBarLabel(isKilling: monitor.isKilling)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// Ensures kill notifications appear as on-screen banners — including when
+/// Hotfix is the active app — instead of being delivered silently to
+/// Notification Center.
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationDelegate()
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
     }
 }
 

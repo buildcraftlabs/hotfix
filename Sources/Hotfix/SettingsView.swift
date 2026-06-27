@@ -112,8 +112,7 @@ struct SettingsView: View {
                             .foregroundStyle(Color(hex: "C9461E"))
                             .frame(width: 42, alignment: .trailing)
                     }
-                    Slider(value: $prefs.cpuThreshold, in: 50...95, step: 5)
-                        .tint(Color(hex: "C9461E"))
+                    BrandSlider(value: $prefs.cpuThreshold, range: 50...95, step: 5)
                     Text("Kill processes using more than \(Int(prefs.cpuThreshold))% CPU sustained")
                         .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(Color(hex: "141416").opacity(0.45))
@@ -133,8 +132,7 @@ struct SettingsView: View {
                             .foregroundStyle(Color(hex: "C9461E"))
                             .frame(width: 64, alignment: .trailing)
                     }
-                    Slider(value: $prefs.killDuration, in: 30...300, step: 15)
-                        .tint(Color(hex: "C9461E"))
+                    BrandSlider(value: $prefs.killDuration, range: 30...300, step: 15)
                     Text("Terminate process after \(Int(prefs.killDuration)) seconds above threshold")
                         .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(Color(hex: "141416").opacity(0.45))
