@@ -693,7 +693,7 @@
     <div class="card-body">
       <div class="log-toolbar">
         <button class="btn-add" id="log-refresh-btn" type="button">Refresh</button>
-        <a class="about-link" id="log-open-link" href="/log" target="_blank">Open in new tab</a>
+        <a class="about-link" id="log-open-link" href="#">Open log file</a>
       </div>
       <pre class="log-view" id="log-view">Loading…</pre>
     </div>
@@ -898,22 +898,15 @@
     };
 
     try {
-      const resp = await fetch('/save', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload)
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text || resp.statusText);
-      }
+      // hotfixSaveConfig is bound by the Go host (WebView2); it validates and
+      // persists, rejecting with an error message if the values are invalid.
+      await hotfixSaveConfig(payload);
 
       config = { ...config, ...payload };
       setStatus('Settings saved successfully.', null);
       $saveStatus.className = 'save-status success';
     } catch (err) {
-      setStatus('Error: ' + err.message, true);
+      setStatus('Error: ' + (err && err.message ? err.message : err), true);
     } finally {
       $saveBtn.disabled = false;
     }
@@ -922,13 +915,10 @@
   // ── Check for updates ──
   $checkUpdates.addEventListener('click', async (e) => {
     e.preventDefault();
-    try {
-      // Hit the GitHub API through the Go server isn't wired — open page directly.
-      await fetch('/check-updates').catch(() => {});
-      window.open('https://github.com/buildcraftlabs/hotfix/releases/latest', '_blank');
-    } catch (_) {
-      window.open('https://github.com/buildcraftlabs/hotfix/releases/latest', '_blank');
-    }
+    // hotfixCheckUpdates triggers the Go updater (silent background install).
+    try { await hotfixCheckUpdates(); } catch (_) {}
+    setStatus('Checking for updates…');
+    setTimeout(() => setStatus(''), 2500);
   });
 
   // ── Logs viewer ──
@@ -938,9 +928,7 @@
   async function loadLogs() {
     $logView.textContent = 'Loading…';
     try {
-      const resp = await fetch('/log', { cache: 'no-store' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const text = await resp.text();
+      const text = await hotfixGetLog();
       // Show the tail (last 200 lines) so the newest entries are visible.
       const lines = text.replace(/\r\n/g, '\n').split('\n').filter((l) => l.length > 0);
       $logView.textContent = lines.length ? lines.slice(-200).join('\n') : 'No log entries yet.';
@@ -952,12 +940,16 @@
 
   $logRefreshBtn.addEventListener('click', loadLogs);
 
+  // "Open log file" opens the log in the OS default text editor (no browser).
+  document.getElementById('log-open-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    try { hotfixOpenLog(); } catch (_) {}
+  });
+
   // ── Load config on startup ──
   async function loadConfig() {
     try {
-      const resp = await fetch('/config');
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const cfg = await resp.json();
+      const cfg = await hotfixGetConfig();
       applyConfig(cfg);
       setStatus('Settings loaded.');
       setTimeout(() => setStatus(''), 2000);

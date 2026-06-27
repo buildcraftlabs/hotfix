@@ -80,6 +80,50 @@ func TestParseSemver_ZeroVersion(t *testing.T) {
 	}
 }
 
+// MARK: - pickRawExeURL
+
+func TestPickRawExeURL_PrefersRawOverSetup(t *testing.T) {
+	assets := []githubAsset{
+		{Name: "Hotfix-Setup-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/setup"},
+		{Name: "Hotfix-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/raw"},
+	}
+	if got := pickRawExeURL(assets); got != "https://example/raw" {
+		t.Errorf("got %q, want the raw exe URL", got)
+	}
+}
+
+func TestPickRawExeURL_SkipsSetupRegardlessOfOrder(t *testing.T) {
+	// Even when the Setup installer is the only .exe-ish asset first, the raw
+	// exe must win no matter the asset ordering.
+	assets := []githubAsset{
+		{Name: "Hotfix-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/raw"},
+		{Name: "Hotfix-Setup-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/setup"},
+	}
+	if got := pickRawExeURL(assets); got != "https://example/raw" {
+		t.Errorf("got %q, want the raw exe URL", got)
+	}
+}
+
+func TestPickRawExeURL_IgnoresNonExe(t *testing.T) {
+	assets := []githubAsset{
+		{Name: "Hotfix-v1.2.3-macOS.dmg", BrowserDownloadURL: "https://example/dmg"},
+		{Name: "Hotfix-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/raw"},
+	}
+	if got := pickRawExeURL(assets); got != "https://example/raw" {
+		t.Errorf("got %q, want the raw exe URL", got)
+	}
+}
+
+func TestPickRawExeURL_NoRawExeReturnsEmpty(t *testing.T) {
+	// Only the installer present → no in-place swap candidate.
+	assets := []githubAsset{
+		{Name: "Hotfix-Setup-v1.2.3-Windows.exe", BrowserDownloadURL: "https://example/setup"},
+	}
+	if got := pickRawExeURL(assets); got != "" {
+		t.Errorf("got %q, want empty string", got)
+	}
+}
+
 // MARK: - currentVersion constant
 
 func TestCurrentVersionIsSet(t *testing.T) {

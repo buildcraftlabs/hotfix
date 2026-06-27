@@ -34,6 +34,30 @@ jobs:
           cd windows
           go test ./...
 
+      # Stamp the version (from the release tag) into versioninfo.json, then
+      # generate resource.syso so the built .exe carries the flame icon and
+      # correct version metadata. On non-release runs the JSON default is used.
+      - name: Generate version resource (icon + metadata)
+        run: |
+          cd windows
+          $tag = "${{ github.event.release.tag_name }}"
+          if ($tag) {
+            $ver = $tag.TrimStart('v')
+            $p = $ver.Split('.')
+            $j = Get-Content versioninfo.json -Raw | ConvertFrom-Json
+            $j.FixedFileInfo.FileVersion.Major    = [int]$p[0]
+            $j.FixedFileInfo.FileVersion.Minor    = [int]$p[1]
+            $j.FixedFileInfo.FileVersion.Patch    = [int]$p[2]
+            $j.FixedFileInfo.ProductVersion.Major = [int]$p[0]
+            $j.FixedFileInfo.ProductVersion.Minor = [int]$p[1]
+            $j.FixedFileInfo.ProductVersion.Patch = [int]$p[2]
+            $j.StringFileInfo.FileVersion    = $ver
+            $j.StringFileInfo.ProductVersion = $ver
+            $j | ConvertTo-Json -Depth 10 | Set-Content versioninfo.json -Encoding utf8
+          }
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          & "$(go env GOPATH)\bin\goversioninfo.exe" -64 -o resource.syso versioninfo.json
+
       - name: Build
         env:
           CGO_ENABLED: 0
@@ -42,13 +66,29 @@ jobs:
           New-Item -ItemType Directory -Force -Path ..\dist | Out-Null
           go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
 
+      # Build the per-user installer (Hotfix-Setup...exe). Installs to
+      # %LOCALAPPDATA%\Programs\Hotfix without admin, so silent updates work.
+      - name: Build installer (Inno Setup)
+        run: |
+          choco install innosetup --no-progress -y
+          $tag = "${{ github.event.release.tag_name }}"
+          if ($tag) { $ver = $tag.TrimStart('v'); $name = "Hotfix-Setup-$tag-Windows" }
+          else      { $ver = "0.0.0";            $name = "Hotfix-Setup" }
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=$ver" "/DMyAppSetupName=$name" `
+            windows\installer\hotfix.iss
+
       - name: Upload artifact (all runs)
         uses: actions/upload-artifact@v7
         with:
           name: Hotfix-Windows
-          path: dist/Hotfix.exe
+          path: |
+            dist/Hotfix.exe
+            dist/Hotfix-Setup*.exe
 
-      - name: Prepare versioned release asset
+      # Release assets: the raw exe (consumed by the in-place auto-updater) and
+      # the installer (the website's download button). No plain Hotfix.exe.
+      - name: Prepare raw exe release asset
         if: github.event_name == 'release'
         run: Copy-Item dist/Hotfix.exe "dist/Hotfix-${{ github.event.release.tag_name }}-Windows.exe"
 
@@ -57,8 +97,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/Hotfix.exe
             dist/Hotfix-${{ github.event.release.tag_name }}-Windows.exe
+            dist/Hotfix-Setup-${{ github.event.release.tag_name }}-Windows.exe
 
   build-macos:
     runs-on: macos-latest
@@ -85,12 +125,12 @@ jobs:
         if: github.event_name == 'release'
         run: cp dist/Hotfix.dmg "dist/Hotfix-${{ github.event.release.tag_name }}-macOS.dmg"
 
+      # Release asset: versioned DMG only (the mac updater matches by .dmg suffix).
       - name: Upload to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/Hotfix.dmg
             dist/Hotfix-${{ github.event.release.tag_name }}-macOS.dmg
 
   # On every release, rewrite the site's download buttons to the new
@@ -113,7 +153,7 @@ jobs:
         run: |
           sed -i -E \
             -e "s#Hotfix-v[0-9]+\.[0-9]+\.[0-9]+-macOS\.dmg#Hotfix-${TAG}-macOS.dmg#g" \
-            -e "s#Hotfix-v[0-9]+\.[0-9]+\.[0-9]+-Windows\.exe#Hotfix-${TAG}-Windows.exe#g" \
+            -e "s#Hotfix-Setup-v[0-9]+\.[0-9]+\.[0-9]+-Windows\.exe#Hotfix-Setup-${TAG}-Windows.exe#g" \
             docs/index.html
 
       - name: Commit and push if changed
