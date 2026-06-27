@@ -3,9 +3,35 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hotfix — Keep Your Machine Cool</title>
+  <title>Hotfix — Kill Runaway CPU Processes | Free for macOS &amp; Windows</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23141416'/><text y='82' font-size='68' x='50' text-anchor='middle' font-family='system-ui'>🔥</text></svg>"/>
   <meta name="description" content="Hotfix automatically terminates runaway processes before your fan spins up. Free, native app for macOS and Windows by BuildCraft Labs."/>
+  <link rel="canonical" href="https://hotfix.buildcraft.town/"/>
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
+  <meta name="keywords" content="Hotfix, CPU monitor, kill runaway processes, prevent fan noise, reduce CPU usage, macOS CPU app, Windows CPU app, stop high CPU, thermal throttling, system tray monitor, BuildCraft Labs"/>
+  <meta name="author" content="BuildCraft Labs"/>
+  <meta name="application-name" content="Hotfix"/>
+  <meta name="theme-color" content="#141416"/>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Hotfix"/>
+  <meta property="og:title" content="Hotfix — Kill runaway CPU processes before your fan spins up"/>
+  <meta property="og:description" content="Hotfix monitors CPU in the background and automatically terminates runaway processes before your fan screams and your battery dies. Free, native, for macOS and Windows."/>
+  <meta property="og:url" content="https://hotfix.buildcraft.town/"/>
+  <meta property="og:image" content="https://hotfix.buildcraft.town/og-image.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta property="og:image:alt" content="Hotfix — keep your machine cool. Free for macOS and Windows."/>
+  <meta property="og:locale" content="en_US"/>
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Hotfix — Kill runaway CPU processes before your fan spins up"/>
+  <meta name="twitter:description" content="Free, native macOS and Windows app that automatically terminates runaway CPU processes before your fan spins up."/>
+  <meta name="twitter:image" content="https://hotfix.buildcraft.town/og-image.png"/>
+  <meta name="twitter:image:alt" content="Hotfix — keep your machine cool. Free for macOS and Windows."/>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -149,7 +175,118 @@
     /* ── Fade in ── */
     .fade { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
     .fade.visible { opacity: 1; transform: none; }
+    .faq { max-width: 760px; margin: 8px auto 0; text-align: left; }
+    .faq-item { border-bottom: 1px solid rgba(20,20,22,0.10); }
+    .faq-item summary { cursor: pointer; list-style: none; padding: 22px 0; font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 500; color: var(--dark); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after { content: '+'; color: var(--accent); font-size: 26px; font-weight: 400; line-height: 1; flex-shrink: 0; }
+    .faq-item[open] summary::after { content: '\2013'; }
+    .faq-item p { padding: 0 0 24px; color: var(--muted); font-size: 16px; line-height: 1.7; }
   </style>
+
+  <!-- Structured data for search, generative & answer engines (SEO/GEO/AEO) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Hotfix",
+        "applicationCategory": "UtilitiesApplication",
+        "applicationSubCategory": "System Monitor",
+        "operatingSystem": "macOS 13+, Windows 11",
+        "url": "https://hotfix.buildcraft.town/",
+        "downloadUrl": "https://github.com/buildcraftlabs/hotfix/releases/latest",
+        "softwareHelp": "https://github.com/buildcraftlabs/hotfix",
+        "image": "https://hotfix.buildcraft.town/og-image.png",
+        "description": "Hotfix is a free, native system-tray app for macOS and Windows that monitors CPU usage and automatically terminates runaway processes before your fan spins up, your machine overheats, or your battery drains.",
+        "isAccessibleForFree": true,
+        "featureList": [
+          "Monitors CPU usage of every process every 5 seconds",
+          "Automatically kills processes that stay above a CPU threshold",
+          "User-configurable CPU threshold and duration",
+          "Permanent safety exclusions for critical system processes",
+          "Custom whitelist for trusted apps",
+          "Desktop notification on every kill",
+          "Silent background auto-updates",
+          "No account, no subscription, no telemetry"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": { "@id": "https://buildcraft.town/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://buildcraft.town/#organization",
+        "name": "BuildCraft Labs",
+        "url": "https://buildcraft.town",
+        "sameAs": [ "https://github.com/buildcraftlabs" ]
+      },
+      {
+        "@type": "WebSite",
+        "name": "Hotfix",
+        "url": "https://hotfix.buildcraft.town/",
+        "publisher": { "@id": "https://buildcraft.town/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Hotfix?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Hotfix is a free, native system-tray app for macOS and Windows that monitors CPU usage and automatically terminates runaway processes before your fan spins up, your machine overheats, or your battery drains."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Hotfix free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Hotfix is completely free and open source. There is no subscription, no account, and no telemetry."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which operating systems does Hotfix support?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Hotfix runs on macOS 13 Ventura or later (Apple Silicon and Intel) and on Windows 11 (64-bit)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Hotfix decide which processes to kill?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Hotfix checks every running process every 5 seconds. When a process stays above your chosen CPU threshold for longer than your chosen duration, Hotfix terminates it and shows a notification. You control both the threshold and the duration."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Will Hotfix kill important system processes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Critical system processes such as kernel_task, WindowServer and Finder are permanently excluded and can never be terminated, and you can add your own trusted apps to a whitelist."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Hotfix collect or send my data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Hotfix has no telemetry and no account. It runs entirely on your machine; the only network request it makes is checking GitHub for new versions so it can update itself silently."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -306,6 +443,41 @@
       </div>
     </div>
     <p class="download-note">macOS: right-click → Open on first launch (not yet notarized). Windows: a per-user installer — no admin needed; the app self-updates silently after that.</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="problem" id="faq">
+  <div class="container fade">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title">Questions, answered.</h2>
+    <p class="section-sub">Everything people ask before installing Hotfix.</p>
+    <div class="faq">
+      <details class="faq-item" open>
+        <summary>What is Hotfix?</summary>
+        <p>Hotfix is a free, native system-tray app for macOS and Windows that monitors CPU usage and automatically terminates runaway processes before your fan spins up, your machine overheats, or your battery drains.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is Hotfix free?</summary>
+        <p>Yes. Hotfix is completely free and open source. There is no subscription, no account, and no telemetry.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Which operating systems does Hotfix support?</summary>
+        <p>Hotfix runs on macOS 13 Ventura or later (Apple Silicon and Intel) and on Windows 11 (64-bit).</p>
+      </details>
+      <details class="faq-item">
+        <summary>How does Hotfix decide which processes to kill?</summary>
+        <p>Hotfix checks every running process every 5 seconds. When a process stays above your chosen CPU threshold for longer than your chosen duration, Hotfix terminates it and shows a notification. You control both the threshold and the duration.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Will Hotfix kill important system processes?</summary>
+        <p>No. Critical system processes such as kernel_task, WindowServer and Finder are permanently excluded and can never be terminated, and you can add your own trusted apps to a whitelist.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Does Hotfix collect or send my data?</summary>
+        <p>No. Hotfix has no telemetry and no account. It runs entirely on your machine; the only network request it makes is checking GitHub for new versions so it can update itself silently.</p>
+      </details>
+    </div>
   </div>
 </section>
 
