@@ -36,7 +36,7 @@ Claude extensions, AI tools, and background daemons run rogue — consuming 50�
 - **Exclusion list** — Protect specific processes from ever being killed
 - **Desktop notifications** — A notification fires whenever a process is terminated
 - **Activity logs** — Events are written to a log file and viewable in-app from Settings (macOS: `~/Library/Logs/Hotfix/hotfix.log`, Windows: `%APPDATA%\Hotfix\hotfix.log`)
-- **Auto-updates** — Checks GitHub releases for new versions on launch
+- **Silent auto-updates** — New versions are downloaded and installed in the background, then the app relaunches — no prompts
 - **Crash reporting** — On both macOS and Windows, a crash opens a pre-filled GitHub issue on the next launch (you review before submitting)
 - **Safety exclusions** — System-critical processes are permanently protected and can never be killed
 
