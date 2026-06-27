@@ -10,10 +10,36 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/getlantern/systray"
 )
+
+// appUserModelID identifies Hotfix to the Windows notification platform. It must
+// match the AppUserModelID stamped on the Start Menu shortcut by the installer
+// (see installer/hotfix.iss) and the ID used to create the toast notifier
+// (see notify.go). Without this identity, Windows silently drops toast banners.
+const appUserModelID = "BuildCraftLabs.Hotfix"
+
+// setAppUserModelID gives this process an explicit AppUserModelID so Windows
+// attributes toast notifications to Hotfix and shows them on screen instead of
+// dropping them. Best-effort: any failure is logged and ignored.
+func setAppUserModelID(id string) {
+	proc := syscall.NewLazyDLL("shell32.dll").NewProc("SetCurrentProcessExplicitAppUserModelID")
+	if err := proc.Find(); err != nil {
+		logf("notify: SetCurrentProcessExplicitAppUserModelID unavailable: %v", err)
+		return
+	}
+	p, err := syscall.UTF16PtrFromString(id)
+	if err != nil {
+		return
+	}
+	if ret, _, _ := proc.Call(uintptr(unsafe.Pointer(p))); ret != 0 {
+		logf("notify: SetCurrentProcessExplicitAppUserModelID returned 0x%x", ret)
+	}
+}
 
 // Tray icons: the color flame emoji (U+1F525), matching the flame next to
 // "Hotfix Settings" on the settings page. Regenerate via gen-icons.ps1.
@@ -42,6 +68,9 @@ func main() {
 	// Set up logging before anything else.
 	initLog()
 	logf("Hotfix starting (version %s)", currentVersion)
+
+	// Claim our notification identity so Windows shows toasts on screen.
+	setAppUserModelID(appUserModelID)
 
 	// If a previous run left a crash behind, surface it for one-click reporting.
 	reportPendingCrash()

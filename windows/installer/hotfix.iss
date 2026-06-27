@@ -60,7 +60,10 @@ Name: "startupicon"; Description: "Start {#MyAppName} automatically when I sign 
 Source: "{#MyAppSrcExe}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+; AppUserModelID must match appUserModelID in main.go / the toast notifier in
+; notify.go. Windows requires a Start Menu shortcut carrying this ID before it
+; will show toast banners on screen instead of dropping them silently.
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "BuildCraftLabs.Hotfix"
 Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Registry]

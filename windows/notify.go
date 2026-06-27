@@ -21,7 +21,7 @@ try {
     [void]$texts.Item(0).AppendChild($xml.CreateTextNode($env:HOTFIX_TOAST_TITLE))
     [void]$texts.Item(1).AppendChild($xml.CreateTextNode($env:HOTFIX_TOAST_BODY))
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Hotfix')
+    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($env:HOTFIX_AUMID)
     $notifier.Show($toast)
 } catch {
     # Fall back to a tray balloon tip if WinRT toasts are unavailable.
@@ -46,6 +46,7 @@ func notifyToast(title, body string) {
 		cmd.Env = append(os.Environ(),
 			"HOTFIX_TOAST_TITLE="+title,
 			"HOTFIX_TOAST_BODY="+body,
+			"HOTFIX_AUMID="+appUserModelID,
 		)
 		cmd.Stdout = io.Discard
 		cmd.Stderr = io.Discard
