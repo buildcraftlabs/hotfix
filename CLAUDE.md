@@ -23,14 +23,25 @@ open dist/Hotfix.app
 ### Windows
 ```powershell
 cd windows
+# Embed the flame icon + version metadata (writes resource.syso), then build.
+# resource.syso is git-ignored; without `go generate` the local exe has no icon.
+go generate ./...
 go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
+
+# Per-user installer → dist/Hotfix-Setup.exe (needs Inno Setup 6 / ISCC.exe)
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=1.0.7 installer\hotfix.iss
 ```
+
+> Icons live in `windows/assets/`: a theme-adaptive monochrome flame for the tray
+> (`tray_white*.png` / `tray_black*.png`, mirroring the macOS menu-bar flame) and a
+> colored `Hotfix.ico` for the .exe/installer. Regenerate all of them with
+> `windows/assets/gen-icons.ps1` (PowerShell + .NET, no external deps).
 
 ## Release Process
 
-1. Bump the version in: `Sources/Hotfix/UpdateChecker.swift` (`currentVersion`), `Resources/Info.plist` (`CFBundleShortVersionString` **and** bump `CFBundleVersion`), `windows/updater.go` (`currentVersion`), and the hardcoded version label in `windows/assets/settings.html` (About card). `windows/main.go` only references `updater.go`'s `currentVersion`, so no literal there. (Version-comparison fixtures in `windows/updater_test.go` are not app versions — leave them.) The **download-button URLs in `docs/index.html`** are bumped **automatically** by the `update-site` CI job — do not edit them by hand.
-2. Create a GitHub release tagged `v<version>` — the `Build` workflow runs automatically on `macos-latest` and `windows-latest`. Each release gets **four** assets: stable `Hotfix.dmg` / `Hotfix.exe` **plus** version+OS-named `Hotfix-v<version>-macOS.dmg` / `Hotfix-v<version>-Windows.exe`. The site's `docs/index.html` buttons point to the versioned names; after the build, the `update-site` job rewrites those URLs to the new version and pushes the change to `main` (Pages serves `docs/` from `main`).
-3. A user-facing feature is **not shipped** until this release is cut and the Build run succeeds with all four assets attached — the website serves only released binaries.
+1. Bump the version in: `Sources/Hotfix/UpdateChecker.swift` (`currentVersion`), `Resources/Info.plist` (`CFBundleShortVersionString` **and** bump `CFBundleVersion`), `windows/updater.go` (`currentVersion`), and the hardcoded version label in `windows/assets/settings.html` (About card). `windows/main.go` only references `updater.go`'s `currentVersion`, so no literal there. (Version-comparison fixtures in `windows/updater_test.go` are not app versions — leave them.) The exe-metadata version in `windows/versioninfo.json` and the installer version are **stamped automatically** from the release tag by CI — don't bump them by hand. The **download-button URLs in `docs/index.html`** are also bumped **automatically** by the `update-site` CI job.
+2. Create a GitHub release tagged `v<version>` — the `Build` workflow runs automatically on `macos-latest` and `windows-2025`. Each release gets **three** version+OS-named assets: `Hotfix-v<version>-macOS.dmg`, `Hotfix-v<version>-Windows.exe` (the **raw exe**, downloaded by the in-place auto-updater), and `Hotfix-Setup-v<version>-Windows.exe` (the **per-user installer**, what the website's Windows button links to). There are no longer any plain `Hotfix.dmg` / `Hotfix.exe` assets. After the build, the `update-site` job rewrites the macOS-DMG and Windows-Setup URLs in `docs/index.html` and pushes to `main` (Pages serves `docs/` from `main`).
+3. A user-facing feature is **not shipped** until this release is cut and the Build run succeeds with all three assets attached — the website serves only released binaries.
 
 > Logs: macOS → `~/Library/Logs/Hotfix/hotfix.log`; Windows → `%APPDATA%\Hotfix\hotfix.log`. Both surface in Settings via an in-app log viewer. Desktop notifications fire on every successful kill (macOS notification center; Windows WinRT toast).
 
@@ -51,14 +62,14 @@ Safety exclusions (kernel_task, WindowServer, Finder, etc.) are hardcoded in `Pr
 
 ### Windows (`windows/`)
 
-A single Go binary with `//go:build windows` on every file. No CGO; uses `github.com/getlantern/systray` for the system tray and `github.com/gonutz/wui/v2` for the native Win32 settings window.
+A single Go binary with `//go:build windows` on every file. No CGO; uses `github.com/getlantern/systray` for the system tray and `github.com/jchv/go-webview2` (pure Go, no CGO) for the settings window. It is **not** an Electron app, and runs **no local HTTP server / no open port**.
 
-- **`main.go`** — Entry point: init logging, load config, start HTTP server, hand control to `systray.Run`.
+- **`main.go`** — Entry point: init logging, load config, hand control to `systray.Run`. Owns the tray icon: embeds the monochrome flame PNGs and picks white vs black at runtime from the `SystemUsesLightTheme` registry value (re-applied live when the user flips light/dark). The `//go:generate` directive here produces `resource.syso` (exe icon + version metadata) from `versioninfo.json` + `assets/Hotfix.ico`.
 - **`monitor.go`** — 5-second poll loop using `wmic` CSV output. Tracks hot processes in `hotMap`, calls `taskkill /F` when threshold exceeded. Sleep detection via a PowerShell WMI event subscription.
 - **`config.go`** — Reads/writes JSON config from `%APPDATA%\Hotfix\config.json`. Thread-safe via `sync.RWMutex`.
-- **`settings_window.go`** — Opens a native Win32 window (`wui`) for settings. Must be called and driven from the same OS thread (`runtime.LockOSThread`).
-- **`server.go`** — Local HTTP server on a random port (`127.0.0.1:0`) serving the embedded `assets/settings.html` and a `/config` + `/save` JSON API. Used as a fallback settings UI.
-- **`updater.go`** — GitHub releases API check; self-updates by downloading the new `.exe` to a temp path and launching it with a replace-and-restart batch script.
+- **`settings_window.go`** — The settings UI: a **WebView2 popover** opened from the tray's "Settings…" item. Loads the embedded `assets/settings.html` directly (`SetHtml`) into a frameless, top-most window anchored at the work-area bottom-right (by the tray), and dismisses on click-away. The page calls Go directly through WebView2 **native bindings** (`hotfixGetConfig` / `hotfixSaveConfig` / `hotfixGetLog` / `hotfixCheckUpdates` / `hotfixOpenLog`) — there is no HTTP server. Save validation + monitor start/stop live in `applySavedConfig`. Runs on a dedicated locked OS thread. If the WebView2 runtime is missing (rare on Win11), it toasts and opens the runtime download page.
+- **`updater.go`** — Silent background self-update (mirrors the macOS updater): polls the GitHub releases API ~30s after launch and every 6h, downloads the **raw** `Hotfix-v…-Windows.exe` asset (`pickRawExeURL` skips the `Hotfix-Setup-*` installer), swaps it onto the running exe via a hidden PowerShell, and relaunches — no prompts. This works without elevation because the app installs **per-user** under `%LOCALAPPDATA%\Programs\Hotfix`.
+- **`installer/hotfix.iss`** — Inno Setup script for the per-user installer (`PrivilegesRequired=lowest` → installs to `%LOCALAPPDATA%\Programs\Hotfix`, no admin/UAC). Adds a Start-Menu shortcut, an optional run-at-login entry, and a proper uninstaller in "Apps & features". The downloaded `Hotfix-Setup-*.exe` is freely deletable after install.
 - **`notify.go`** — Desktop toast notifications via hidden PowerShell (WinRT `Windows.UI.Notifications` toast, with a `NotifyIcon` balloon-tip fallback). Title/body are passed through env vars to avoid quoting/injection. Called from `notifyKilled` in addition to the tray-label update. File logging is handled by `initLog`/`logf` in `main.go` (writes to `%APPDATA%\Hotfix\hotfix.log`).
 
 All console-spawning child processes (`wmic`, `taskkill`, `powershell`) use `HideWindow: true` in `SysProcAttr` to prevent flash windows (since the binary is built with `-H windowsgui`).

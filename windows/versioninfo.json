@@ -1,0 +1,26 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": { "Major": 1, "Minor": 0, "Patch": 8, "Build": 0 },
+    "ProductVersion": { "Major": 1, "Minor": 0, "Patch": 8, "Build": 0 },
+    "FileFlagsMask": "3f",
+    "FileFlags": "00",
+    "FileOS": "040004",
+    "FileType": "01",
+    "FileSubType": "00"
+  },
+  "StringFileInfo": {
+    "CompanyName": "BuildCraft Labs",
+    "FileDescription": "Hotfix — kills runaway CPU processes before the fans spin up",
+    "FileVersion": "1.0.8",
+    "InternalName": "Hotfix",
+    "LegalCopyright": "© BuildCraft Labs",
+    "OriginalFilename": "Hotfix.exe",
+    "ProductName": "Hotfix",
+    "ProductVersion": "1.0.8"
+  },
+  "VarFileInfo": {
+    "Translation": { "LangID": "0409", "CharsetID": "04B0" }
+  },
+  "IconPath": "assets/Hotfix.ico",
+  "ManifestPath": ""
+}

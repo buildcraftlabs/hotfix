@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	currentVersion  = "1.0.7"
+	currentVersion  = "1.0.8"
 	releasesAPIURL  = "https://api.github.com/repos/buildcraftlabs/hotfix/releases/latest"
 	releasesPageURL = "https://github.com/buildcraftlabs/hotfix/releases/latest"
 )
@@ -99,14 +99,8 @@ func checkForUpdates(auto bool) {
 		return
 	}
 
-	// Find the .exe asset
-	var exeURL string
-	for _, a := range release.Assets {
-		if strings.HasSuffix(strings.ToLower(a.Name), ".exe") {
-			exeURL = a.BrowserDownloadURL
-			break
-		}
-	}
+	// Find the raw app .exe to swap in place — never the Setup installer.
+	exeURL := pickRawExeURL(release.Assets)
 
 	if exeURL == "" {
 		logf("updater: no .exe asset found, opening browser")
@@ -117,6 +111,19 @@ func checkForUpdates(auto bool) {
 	logf("updater: downloading %s from %s", tag, exeURL)
 	setTrayStatus("Downloading update…", false)
 	go downloadAndReplace(exeURL, tag)
+}
+
+// pickRawExeURL returns the download URL of the raw Hotfix .exe asset — the one
+// the in-place updater swaps onto disk. The Setup installer (Hotfix-Setup-*.exe)
+// is skipped: it's only for first-time installs, not background updates.
+func pickRawExeURL(assets []githubAsset) string {
+	for _, a := range assets {
+		name := strings.ToLower(a.Name)
+		if strings.HasSuffix(name, ".exe") && !strings.Contains(name, "setup") {
+			return a.BrowserDownloadURL
+		}
+	}
+	return ""
 }
 
 func downloadAndReplace(exeURL, version string) {
