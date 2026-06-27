@@ -57,6 +57,7 @@ The app is a `MenuBarExtra`-only app (no Dock icon). Core objects are singletons
 - **`SettingsWindowController`** / **`SettingsView`** — Native SwiftUI settings panel opened from the menu.
 - **`MenuBarPopoverView`** — The popover shown when clicking the tray flame icon. Shows hot processes and quick toggles.
 - **`Log`** (`Logger.swift`) — Thread-safe file logger (`logf("…")`) that appends to `~/Library/Logs/Hotfix/hotfix.log` (and stderr). Mirrors the Windows logger format. Desktop notifications use `UNUserNotificationCenter` (authorization requested at launch).
+- **`CrashReporter`** (`CrashReporter.swift`) — Crash capture mirroring the Windows `crashreport.go`: an uncaught-`NSException` handler and async-signal-safe signal handlers (SIGSEGV/SIGABRT/SIGILL/SIGFPE/SIGBUS/SIGTRAP, covering Swift fatal-error traps) write a marker (`~/Library/Logs/Hotfix/lastcrash.txt`); on the next launch it opens a pre-filled, tokenless GitHub "New Issue" page and clears the marker. Armed in `HotfixApp.init`.
 
 Safety exclusions (kernel_task, WindowServer, Finder, etc.) are hardcoded in `ProcessMonitor` and can never be overridden by user settings.
 

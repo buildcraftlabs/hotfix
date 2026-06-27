@@ -7,6 +7,10 @@ struct HotfixApp: App {
     @StateObject private var prefs = PreferencesManager.shared
 
     init() {
+        // Report a crash from the previous run (if any), then arm crash capture.
+        CrashReporter.reportPending()
+        CrashReporter.install()
+
         logf("Hotfix starting (version \(UpdateChecker.currentVersion))")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error {
