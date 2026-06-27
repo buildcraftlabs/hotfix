@@ -13,24 +13,16 @@ import (
 	"time"
 
 	"github.com/getlantern/systray"
-	"golang.org/x/sys/windows/registry"
 )
 
-// Monochrome flame tray icons, mirroring the macOS menu-bar SF Symbol: a white
-// flame for a dark taskbar, a black flame for a light one. iconBytes picks the
-// pair that matches the current taskbar theme. Regenerate via gen-icons.ps1.
+// Tray icons: the color flame emoji (U+1F525), matching the flame next to
+// "Hotfix Settings" on the settings page. Regenerate via gen-icons.ps1.
 //
-//go:embed assets/tray_white16.png
-var trayWhite16 []byte
+//go:embed assets/flame16.png
+var flamePNG16 []byte
 
-//go:embed assets/tray_white32.png
-var trayWhite32 []byte
-
-//go:embed assets/tray_black16.png
-var trayBlack16 []byte
-
-//go:embed assets/tray_black32.png
-var trayBlack32 []byte
+//go:embed assets/flame32.png
+var flamePNG32 []byte
 
 // Embed the app icon + version metadata into the .exe. Generates resource.syso
 // from versioninfo.json (which points at assets/Hotfix.ico); `go build` then
@@ -89,9 +81,6 @@ func onReady() {
 
 	// Watch for system sleep events (KillOnSleep support).
 	watchSleep()
-
-	// Keep the tray flame legible when the user flips light/dark mode.
-	watchThemeChanges()
 
 	// Begin silent background auto-updates (launch check + periodic poll).
 	startAutoUpdater()
@@ -199,53 +188,13 @@ func setTrayStatus(label string, alert bool) {
 
 // --- Tray icon ---
 
-// iconBytes returns an ICO with the monochrome flame matching the taskbar
-// theme — a black flame on a light taskbar, a white flame on a dark one — so
-// the tray icon stays legible, like the adaptive macOS menu-bar flame.
+// iconBytes returns an ICO containing the 16x16 and 32x32 color flame PNGs
+// (the U+1F525 emoji), matching the settings-page flame.
 func iconBytes() []byte {
-	p16, p32 := trayWhite16, trayWhite32
-	if systemUsesLightTheme() {
-		p16, p32 = trayBlack16, trayBlack32
-	}
 	return pngToICO(
-		pngFrame{size: 16, data: p16},
-		pngFrame{size: 32, data: p32},
+		pngFrame{size: 16, data: flamePNG16},
+		pngFrame{size: 32, data: flamePNG32},
 	)
-}
-
-// systemUsesLightTheme reports whether Windows is using the light taskbar
-// theme (in which case the tray needs a dark flame to stay visible). Defaults
-// to false — a dark taskbar, the Windows 11 default — if the value is missing.
-func systemUsesLightTheme() bool {
-	k, err := registry.OpenKey(registry.CURRENT_USER,
-		`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
-		registry.QUERY_VALUE)
-	if err != nil {
-		return false
-	}
-	defer k.Close()
-	v, _, err := k.GetIntegerValue("SystemUsesLightTheme")
-	if err != nil {
-		return false
-	}
-	return v == 1
-}
-
-// watchThemeChanges re-applies the tray icon whenever the taskbar flips
-// between light and dark mode, so the monochrome flame stays legible. Polling
-// the registry value is cheap and avoids a native change-notification handle.
-func watchThemeChanges() {
-	safeGo("theme-watch", func() {
-		last := systemUsesLightTheme()
-		t := time.NewTicker(15 * time.Second)
-		defer t.Stop()
-		for range t.C {
-			if cur := systemUsesLightTheme(); cur != last {
-				last = cur
-				systray.SetIcon(iconBytes())
-			}
-		}
-	})
 }
 
 type pngFrame struct {
