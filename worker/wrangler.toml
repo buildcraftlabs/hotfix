@@ -1,0 +1,21 @@
+name = "hotfix-dl"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# Intercept only /dl/* on the site's hostname; everything else falls through to
+# GitHub Pages. Requires buildcraft.town DNS to be proxied through Cloudflare
+# (orange cloud) and the zone to exist in this Cloudflare account.
+routes = [
+  { pattern = "hotfix.buildcraft.town/dl/*", zone_name = "buildcraft.town" },
+]
+
+# Workers KV counter store. Create it once with:
+#   wrangler kv namespace create HOTFIX_DL
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "HOTFIX_DL"
+id = "5c5410d8e9844d39ad86217c0bcc235d"
+
+# Optional secrets (set with `wrangler secret put <NAME>`):
+#   STATS_TOKEN  - required to read GET /dl/stats?key=...
+#   GITHUB_TOKEN - optional; raises the GitHub API rate limit for asset lookup

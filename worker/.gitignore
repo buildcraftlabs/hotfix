@@ -1,0 +1,4 @@
+# Wrangler local dev cache / state
+.wrangler/
+# Node deps (wrangler is installed globally; nothing local expected)
+node_modules/
