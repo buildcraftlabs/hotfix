@@ -132,6 +132,12 @@ class ProcessMonitor: ObservableObject {
         var newHot: [HotProcess] = []
         var updatedStartTimes: [Int32: TimeInterval] = [:]
 
+        // Spare the app the user is actively using (the frontmost app's process)
+        // when the setting is on. nil means "don't protect / unknown".
+        let frontmostPID: Int32? = PreferencesManager.shared.protectActiveApp
+            ? NSWorkspace.shared.frontmostApplication?.processIdentifier
+            : nil
+
         for entry in parsed {
             let pid = entry.pid
             let cpu = entry.cpu
@@ -141,6 +147,7 @@ class ProcessMonitor: ObservableObject {
             guard pid >= 100 else { continue }
             guard !safetyExclusions.contains(name) else { continue }
             guard !userWhitelist.contains(name) else { continue }
+            if let fp = frontmostPID, pid == fp { continue }
 
             if cpu >= threshold {
                 let startTime = hotStartTimes[pid] ?? now
@@ -150,7 +157,7 @@ class ProcessMonitor: ObservableObject {
                 let proc = HotProcess(
                     id: pid,
                     pid: pid,
-                    name: name,
+                    name: Self.friendlyName(pid: pid, comm: name),
                     cpuPercent: cpu,
                     hotSeconds: hotSecs
                 )
@@ -167,6 +174,21 @@ class ProcessMonitor: ObservableObject {
 
         hotStartTimes = updatedStartTimes
         hotProcesses = newHot.sorted { $0.cpuPercent > $1.cpuPercent }
+    }
+
+    // MARK: - Friendly name
+    /// Returns a human-friendly display name for a process. For GUI apps this
+    /// appends the app's localized name (e.g. "Code (Visual Studio Code)"); for
+    /// daemons/scripts with no bundle it falls back to the raw executable name.
+    /// Only used for display — matching (safety/whitelist) still uses the raw comm.
+    static func friendlyName(pid: Int32, comm: String) -> String {
+        guard let app = NSRunningApplication(processIdentifier: pid),
+              let localized = app.localizedName,
+              !localized.isEmpty,
+              localized.caseInsensitiveCompare(comm) != .orderedSame else {
+            return comm
+        }
+        return "\(comm) (\(localized))"
     }
 
     // MARK: - Termination

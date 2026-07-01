@@ -163,9 +163,16 @@ func applySavedConfig(cfg Config) error {
 	// Enabled here must start/stop it too. Both calls are idempotent.
 	if cfg.Enabled {
 		startMonitor()
+		setTrayStatus("Watching", false)
 	} else {
 		stopMonitor()
+		setTrayStatus("Disabled", false)
 	}
+
+	// Keep the tray menu's "Enable Monitoring" checkmark in sync with the state
+	// chosen in the settings window. Without this, disabling monitoring in
+	// Settings leaves the tray checkmark ticked (out of sync).
+	syncToggleCheck()
 	return nil
 }
 
@@ -204,14 +211,15 @@ func settingsUnavailable() {
 // --- Win32 popover plumbing ---
 
 var (
-	user32                   = windows.NewLazySystemDLL("user32.dll")
-	procShowWindow           = user32.NewProc("ShowWindow")
-	procSetWindowPos         = user32.NewProc("SetWindowPos")
-	procGetForegroundWindow  = user32.NewProc("GetForegroundWindow")
-	procSetForegroundWindow  = user32.NewProc("SetForegroundWindow")
-	procGetWindowLongPtr     = user32.NewProc("GetWindowLongPtrW")
-	procSetWindowLongPtr     = user32.NewProc("SetWindowLongPtrW")
-	procSystemParametersInfo = user32.NewProc("SystemParametersInfoW")
+	user32                       = windows.NewLazySystemDLL("user32.dll")
+	procShowWindow               = user32.NewProc("ShowWindow")
+	procSetWindowPos             = user32.NewProc("SetWindowPos")
+	procGetForegroundWindow      = user32.NewProc("GetForegroundWindow")
+	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
+	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+	procGetWindowLongPtr         = user32.NewProc("GetWindowLongPtrW")
+	procSetWindowLongPtr         = user32.NewProc("SetWindowLongPtrW")
+	procSystemParametersInfo     = user32.NewProc("SystemParametersInfoW")
 
 	// GWL_STYLE / GWL_EXSTYLE are negative; kept as vars so the uintptr
 	// conversion is non-constant (a constant negative→uintptr won't compile).
@@ -276,6 +284,19 @@ func showSettingsPopover() {
 
 	settingsShownAt.Store(time.Now().UnixNano())
 	settingsVisible.Store(true)
+}
+
+// foregroundPID returns the PID that owns the current foreground window, or 0 if
+// it cannot be determined. Used to spare the app the user is actively using from
+// being killed. Safe to call from the monitor goroutine.
+func foregroundPID() int {
+	hwnd, _, _ := procGetForegroundWindow.Call()
+	if hwnd == 0 {
+		return 0
+	}
+	var pid uint32
+	procGetWindowThreadProcessId.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+	return int(pid)
 }
 
 // hideSettingsPopover hides (does not destroy) the window. Must run on the UI thread.

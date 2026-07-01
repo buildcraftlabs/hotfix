@@ -3,8 +3,8 @@
 package main
 
 import (
-	_ "embed"
 	"bytes"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -175,7 +175,12 @@ func toggleEnabled() {
 }
 
 // syncToggleCheck updates the checkmark on the toggle menu item to reflect config.
+// nil-guarded so it is safe to call before the tray menu is built (e.g. from tests
+// or the settings window) without panicking.
 func syncToggleCheck() {
+	if mToggle == nil {
+		return
+	}
 	if getConfig().Enabled {
 		mToggle.Check()
 	} else {
@@ -207,7 +212,11 @@ func notifyKilled(name string, pid int, cpu float64) {
 }
 
 // setTrayStatus updates the disabled status label at the top of the menu.
+// nil-guarded so it is safe to call before the tray menu is built.
 func setTrayStatus(label string, alert bool) {
+	if mStatus == nil {
+		return
+	}
 	prefix := "Hotfix — "
 	if alert {
 		prefix = "🔥 Hotfix — "
@@ -245,11 +254,11 @@ func pngToICO(frames ...pngFrame) []byte {
 	// Each ICONDIRENTRY is 16 bytes; image data follows all entries.
 	offset := uint32(6 + 16*int(n))
 	for _, f := range frames {
-		sz := byte(f.size) // 0 means 256 for the ICO spec; 32→32
-		b.WriteByte(sz)    // width
-		b.WriteByte(sz)    // height
-		b.WriteByte(0)     // colorCount (0 = no palette)
-		b.WriteByte(0)     // reserved
+		sz := byte(f.size)                        // 0 means 256 for the ICO spec; 32→32
+		b.WriteByte(sz)                           // width
+		b.WriteByte(sz)                           // height
+		b.WriteByte(0)                            // colorCount (0 = no palette)
+		b.WriteByte(0)                            // reserved
 		binary.Write(&b, le, uint16(1))           // planes
 		binary.Write(&b, le, uint16(32))          // bitCount
 		binary.Write(&b, le, uint32(len(f.data))) // imageSize
@@ -264,11 +273,16 @@ func pngToICO(frames ...pngFrame) []byte {
 	return b.Bytes()
 }
 
-
 // --- Logging ---
+
+// maxLogBytes caps the log file size; when exceeded it is rolled to hotfix.log.1
+// (one backup) and a fresh log is started, so the file never grows unbounded.
+const maxLogBytes = 5 * 1024 * 1024
+
 var (
-	logFile *os.File
-	logMu   sync.Mutex
+	logFile  *os.File
+	logMu    sync.Mutex
+	logBytes int64 // approximate current size of logFile, guarded by logMu
 )
 
 // logFilePath returns the absolute path to the log file, or "" if it cannot be
@@ -292,6 +306,9 @@ func initLog() {
 		return
 	}
 	logFile = f
+	if fi, err := f.Stat(); err == nil {
+		logBytes = fi.Size()
+	}
 }
 
 func logf(format string, args ...any) {
@@ -300,10 +317,35 @@ func logf(format string, args ...any) {
 	msg := fmt.Sprintf("[%s] "+format+"\n",
 		append([]any{time.Now().Format("2006-01-02 15:04:05")}, args...)...)
 	if logFile != nil {
-		_, _ = logFile.WriteString(msg)
+		n, _ := logFile.WriteString(msg)
+		logBytes += int64(n)
+		if logBytes > maxLogBytes {
+			rotateLogLocked()
+		}
 	}
 	// In debug builds you can uncomment the line below:
 	// os.Stderr.WriteString(msg)
+}
+
+// rotateLogLocked rolls hotfix.log → hotfix.log.1 (one backup) and reopens a
+// fresh log. The caller must hold logMu.
+func rotateLogLocked() {
+	path := logFilePath()
+	if path == "" || logFile == nil {
+		return
+	}
+	_ = logFile.Close()
+	backup := path + ".1"
+	_ = os.Remove(backup)
+	_ = os.Rename(path, backup)
+
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logFile = nil
+		return
+	}
+	logFile = f
+	logBytes = 0
 }
 
 func closeLog() {

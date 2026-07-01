@@ -9,6 +9,10 @@ final class Log {
     private var handle: FileHandle?
     private let dateFormatter: DateFormatter
 
+    /// Cap the log at 5 MB; beyond that it is rolled to hotfix.log.1 (one backup)
+    /// and a fresh log is started, so the file never grows unbounded.
+    private let maxBytes: UInt64 = 5 * 1024 * 1024
+
     /// Resolved log file URL (~/Library/Logs/Hotfix/hotfix.log), or nil if it
     /// could not be created.
     let fileURL: URL?
@@ -58,9 +62,27 @@ final class Log {
         let line = formattedLine(message)
         queue.async { [weak self] in
             FileHandle.standardError.write(Data(line.utf8))
-            guard let data = line.data(using: .utf8) else { return }
-            self?.handle?.write(data)
+            guard let self, let data = line.data(using: .utf8) else { return }
+            self.handle?.write(data)
+            self.rotateIfNeeded()
         }
+    }
+
+    /// Roll the log to hotfix.log.1 once it exceeds `maxBytes`. Runs on `queue`,
+    /// so it is serialized with writes and needs no extra locking.
+    private func rotateIfNeeded() {
+        guard let url = fileURL, let handle,
+              let size = try? handle.offset(), size > maxBytes else { return }
+
+        try? handle.close()
+        let backup = url.deletingLastPathComponent().appendingPathComponent("hotfix.log.1")
+        let fm = FileManager.default
+        try? fm.removeItem(at: backup)
+        try? fm.moveItem(at: url, to: backup)
+        fm.createFile(atPath: url.path, contents: nil)
+
+        self.handle = try? FileHandle(forWritingTo: url)
+        self.handle?.seekToEndOfFile()
     }
 
     /// Block until all pending asynchronous writes have completed. Intended for

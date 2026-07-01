@@ -8,6 +8,7 @@ class PreferencesManager: ObservableObject {
     @AppStorage("cpuThreshold") var cpuThreshold: Double = 80.0
     @AppStorage("killDuration") var killDuration: Double = 60.0
     @AppStorage("killOnSleep") var killOnSleep: Bool = true
+    @AppStorage("protectActiveApp") var protectActiveApp: Bool = true
 
     private let whitelistKey = "processWhitelist"
 

@@ -156,6 +156,25 @@ struct SettingsView: View {
                         .tint(Color(hex: "C9461E"))
                         .labelsHidden()
                 }
+
+                BCDivider()
+
+                // Protect active app toggle
+                SettingsRow {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Protect Active App")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: "141416"))
+                        Text("Never kill the app you're currently using")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(Color(hex: "141416").opacity(0.45))
+                    }
+                } trailing: {
+                    Toggle("", isOn: $prefs.protectActiveApp)
+                        .toggleStyle(.switch)
+                        .tint(Color(hex: "C9461E"))
+                        .labelsHidden()
+                }
             }
         }
         .padding(.top, 20)
@@ -383,14 +402,41 @@ struct SettingsView: View {
     }
 
     /// Load the tail of the log file (last 200 lines) into the in-page viewer.
+    ///
+    /// Runs off the main thread and only reads the final chunk of the file — a
+    /// synchronous whole-file read here froze the Settings window when the log had
+    /// grown large and the machine was under load.
     private func loadLogText() {
-        guard let url = Log.shared.fileURL,
-              let contents = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let url = Log.shared.fileURL else {
             logText = ""
             return
         }
-        let lines = contents.split(separator: "\n", omittingEmptySubsequences: true)
-        logText = lines.suffix(200).joined(separator: "\n")
+        Task.detached(priority: .utility) {
+            let tail = Self.tailOfLog(url, maxBytes: 64 * 1024, maxLines: 200)
+            await MainActor.run { self.logText = tail }
+        }
+    }
+
+    /// Read at most `maxBytes` from the end of the file and return its last
+    /// `maxLines` lines. Bounded in both time and memory so it never blocks the UI.
+    nonisolated private static func tailOfLog(_ url: URL, maxBytes: Int, maxLines: Int) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return "" }
+        defer { try? handle.close() }
+
+        let size = (try? handle.seekToEnd()) ?? 0
+        let start = size > UInt64(maxBytes) ? size - UInt64(maxBytes) : 0
+        try? handle.seek(toOffset: start)
+
+        guard let data = try? handle.readToEnd(),
+              var text = String(data: data, encoding: .utf8) else { return "" }
+
+        // If we started mid-file we may have sliced a line in half — drop it.
+        if start > 0, let nl = text.firstIndex(of: "\n") {
+            text = String(text[text.index(after: nl)...])
+        }
+
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        return lines.suffix(maxLines).joined(separator: "\n")
     }
 
     private func addExclusion() {

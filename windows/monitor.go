@@ -26,19 +26,19 @@ func hiddenCmd(name string, args ...string) *exec.Cmd {
 
 // safetyExclusions are processes that must NEVER be killed, regardless of config.
 var safetyExclusions = map[string]bool{
-	"explorer":  true,
-	"svchost":   true,
-	"lsass":     true,
-	"csrss":     true,
-	"wininit":   true,
-	"services":  true,
-	"winlogon":  true,
-	"System":    true,
-	"Registry":  true,
-	"smss":      true,
-	"dwm":       true,
-	"Idle":      true,
-	"MsMpEng":   true, // Windows Defender — never kill
+	"explorer": true,
+	"svchost":  true,
+	"lsass":    true,
+	"csrss":    true,
+	"wininit":  true,
+	"services": true,
+	"winlogon": true,
+	"System":   true,
+	"Registry": true,
+	"smss":     true,
+	"dwm":      true,
+	"Idle":     true,
+	"MsMpEng":  true, // Windows Defender — never kill
 }
 
 // baseProcName strips the perf-counter instance suffix ("#1", "#2", …) that
@@ -140,6 +140,13 @@ func checkProcesses() {
 		wl[strings.ToLower(name)] = true
 	}
 
+	// Spare the process that owns the foreground window — the app the user is
+	// actively using — when the setting is on. 0 means "unknown / none".
+	protectPID := 0
+	if cfg.ProtectActiveApp {
+		protectPID = foregroundPID()
+	}
+
 	now := time.Now()
 
 	hotMu.Lock()
@@ -158,6 +165,9 @@ func checkProcesses() {
 		if wl[strings.ToLower(baseProcName(e.Name))] {
 			continue
 		}
+		if protectPID != 0 && e.PID == protectPID {
+			continue
+		}
 
 		if e.CPU < cfg.CPUThreshold {
 			continue
@@ -169,7 +179,7 @@ func checkProcesses() {
 		if !exists {
 			hp = &HotProcess{
 				PID:      e.PID,
-				Name:     e.Name,
+				Name:     friendlyName(e.PID, e.Name),
 				CPU:      e.CPU,
 				HotSince: now,
 			}
@@ -325,6 +335,24 @@ func parseWMICCSV(raw string) ([]processEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// friendlyName returns a human-friendly display name for a process, appending
+// the executable's FileDescription when available (e.g. "chrome (Google Chrome)").
+// Falls back to the raw image name for processes without version info. Resolved
+// once per process when it first goes hot, so the PowerShell cost is negligible.
+// Display-only — safety/whitelist matching still uses the raw image name.
+func friendlyName(pid int, comm string) string {
+	out, err := hiddenCmd("powershell", "-NonInteractive", "-NoProfile",
+		"-Command", fmt.Sprintf("(Get-Process -Id %d -ErrorAction SilentlyContinue).Description", pid)).Output()
+	if err != nil {
+		return comm
+	}
+	desc := strings.TrimSpace(string(out))
+	if desc == "" || strings.EqualFold(desc, comm) {
+		return comm
+	}
+	return fmt.Sprintf("%s (%s)", comm, desc)
 }
 
 // killProcess terminates a process via taskkill and updates the tray label.

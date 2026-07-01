@@ -11,11 +11,12 @@ import (
 
 // Config holds all user-configurable settings for Hotfix.
 type Config struct {
-	Enabled      bool     `json:"enabled"`
-	CPUThreshold float64  `json:"cpu_threshold"` // percent, default 80.0
-	KillDuration float64  `json:"kill_duration"` // seconds before kill, default 60
-	KillOnSleep  bool     `json:"kill_on_sleep"` // kill hot procs on system sleep
-	Whitelist    []string `json:"whitelist"`     // user-managed exclusions
+	Enabled          bool     `json:"enabled"`
+	CPUThreshold     float64  `json:"cpu_threshold"`      // percent, default 80.0
+	KillDuration     float64  `json:"kill_duration"`      // seconds before kill, default 60
+	KillOnSleep      bool     `json:"kill_on_sleep"`      // kill hot procs on system sleep
+	ProtectActiveApp bool     `json:"protect_active_app"` // never kill the foreground app
+	Whitelist        []string `json:"whitelist"`          // user-managed exclusions
 }
 
 var defaultWhitelist = []string{
@@ -25,11 +26,12 @@ var defaultWhitelist = []string{
 
 func defaultConfig() Config {
 	return Config{
-		Enabled:      true,
-		CPUThreshold: 80.0,
-		KillDuration: 60.0,
-		KillOnSleep:  true,
-		Whitelist:    defaultWhitelist,
+		Enabled:          true,
+		CPUThreshold:     80.0,
+		KillDuration:     60.0,
+		KillOnSleep:      true,
+		ProtectActiveApp: true,
+		Whitelist:        defaultWhitelist,
 	}
 }
 
@@ -67,6 +69,16 @@ func loadConfig() Config {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		logf("config: parse error (%v), using defaults", err)
 		return defaultConfig()
+	}
+
+	// Migrate pre-existing configs that predate protect_active_app: an absent
+	// field unmarshals to false, but the intended default is ON. Detect absence
+	// with a pointer probe so an explicit `false` is preserved.
+	var probe struct {
+		ProtectActiveApp *bool `json:"protect_active_app"`
+	}
+	if json.Unmarshal(data, &probe) == nil && probe.ProtectActiveApp == nil {
+		cfg.ProtectActiveApp = true
 	}
 
 	// Guard against invalid values.
