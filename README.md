@@ -81,9 +81,9 @@ go build -ldflags "-H windowsgui -s -w" -o ..\dist\Hotfix.exe .
 
 Releasing is fully automated. Both binaries are built and attached by CI on every new release.
 
-1. Bump the version in `Sources/Hotfix/UpdateChecker.swift`, `Resources/Info.plist` (short string + build number), `windows/updater.go`, and the About label in `windows/assets/settings.html`. (The exe metadata in `windows/versioninfo.json`, the installer version, and the `docs/index.html` download links are all stamped automatically by CI — see step 3.)
+1. Bump the version in `Sources/Hotfix/UpdateChecker.swift`, `Resources/Info.plist` (short string + build number), `windows/updater.go`, and the About label in `windows/assets/settings.html`. (The exe metadata in `windows/versioninfo.json` and the installer version are stamped automatically by CI — see step 3. The website's download buttons carry no version — they point at a redirect that always resolves the latest release — so there's nothing to bump there.)
 2. Create a GitHub release tagged `v<version>`
-3. The `Build` workflow runs on `macos-latest` + `windows-2025` and attaches **three** version+OS-named assets: `Hotfix-v<version>-macOS.dmg`, `Hotfix-v<version>-Windows.exe` (raw exe for the auto-updater), and `Hotfix-Setup-v<version>-Windows.exe` (the per-user installer the website links to). The `update-site` job then rewrites the download URLs in `docs/index.html` to the new version and pushes to `main`
+3. The `Build` workflow runs on `macos-latest` + `windows-2025` and attaches **three** version+OS-named assets: `Hotfix-v<version>-macOS.dmg`, `Hotfix-v<version>-Windows.exe` (raw exe for the auto-updater), and `Hotfix-Setup-v<version>-Windows.exe` (the per-user installer the website links to). No site update is needed: the website's download buttons route through a Cloudflare Worker (`worker/`) that always resolves the latest release, and it also counts installs — see the Worker's own README
 
 Users on both platforms will be notified of the update on next launch.
 
@@ -99,8 +99,10 @@ hotfix/
 │   ├── installer/      # Inno Setup script (per-user installer)
 │   └── *.go            # Go source files
 ├── icon/               # App icon assets
-├── landing-page/       # Marketing website
-└── .github/workflows/  # CI for Windows builds
+├── docs/               # Marketing website (GitHub Pages, hotfix.buildcraft.town)
+├── worker/             # Cloudflare Worker: /dl/* download-counter + redirect
+├── landing-page/       # Older marketing site
+└── .github/workflows/  # CI (macOS + Windows builds, site update)
 ```
 
 ## License
